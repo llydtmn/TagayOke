@@ -1,0 +1,11 @@
+﻿const express = require('express');
+const router = express.Router();
+const auth = require('../middleware/auth');
+const c = require('../controllers/cropController');
+router.use(auth);
+router.get('/', c.getAll);
+router.get('/:id', c.getOne);
+router.post('/', c.create);
+router.patch('/:id/toggle', c.toggleStatus);
+router.delete('/:id', c.remove);
+module.exports = router;

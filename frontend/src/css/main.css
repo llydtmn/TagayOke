@@ -1,0 +1,126 @@
+/* ─── TAILWIND DIRECTIVES (must be first) ────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Earth / nature palette */
+  --forest-50:  #f2f7f2;
+  --forest-100: #ddeedd;
+  --forest-200: #b8d9b8;
+  --forest-300: #7fba7f;
+  --forest-400: #4d9e4d;
+  --forest-500: #357a35;
+  --forest-600: #275f27;
+  --forest-700: #1d471d;
+
+  --earth-50:  #faf7f2;
+  --earth-100: #f0e9db;
+  --earth-200: #ddd0ba;
+  --earth-300: #c4ae8e;
+  --earth-400: #a8895f;
+  --earth-500: #8a6d42;
+  --earth-600: #6e5530;
+  --earth-700: #523e21;
+
+  --teal-300: #5eead4;
+  --teal-400: #2d9b90;
+  --teal-500: #1d7a70;
+  --teal-600: #0f5a52;
+
+  --terra-400: #c95c20;
+  --terra-500: #b04e18;
+
+  --amber-50:  #fffbeb;
+  --amber-100: #fef3c7;
+  --amber-200: #fde68a;
+  --amber-300: #fcd34d;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --amber-600: #d97706;
+
+  --slate-50:  #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  --red-50:  #fef2f2;
+  --red-100: #fee2e2;
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+
+  /* Semantic tokens */
+  --bg:         #f6f8f5;
+  --surface:    #ffffff;
+  --surface-2:  #f8faf7;
+  --border:     #e2e8e0;
+  --border-2:   #d0d8cc;
+  --text-1:     #1a2218;
+  --text-2:     #3d4f39;
+  --text-3:     #6b7c66;
+  --text-4:     #94a88e;
+
+  --accent:     var(--forest-500);
+  --accent-2:   var(--earth-500);
+
+  /* Layout */
+  --sidebar-w:  240px;
+  --topbar-h:   60px;
+
+  /* Typography */
+  --font-d: 'Syne', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --font-m: 'DM Mono', monospace;
+
+  /* Easing */
+  --ease-out:    cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow:    0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.1), 0 4px 8px rgba(0,0,0,.06);
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-b);
+  background: var(--bg);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-4); }
+
+/* ─── ANIMATIONS ─────────────────────────────────── */
+@keyframes fadeIn   { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp  { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes slideRight { from { opacity: 0; transform: translateX(-12px) } to { opacity: 1; transform: translateX(0) } }
+@keyframes scaleIn  { from { opacity: 0; transform: scale(.95) } to { opacity: 1; transform: scale(1) } }
+@keyframes bounceIn { 0% { opacity:0; transform:scale(.85) } 60% { opacity:1; transform:scale(1.02) } 100% { transform:scale(1) } }
+@keyframes spin     { to { transform: rotate(360deg) } }
+@keyframes pulse    { 0%,100% { opacity:1 } 50% { opacity:.5 } }
+@keyframes shimmer  { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+
+.animate-fade   { animation: fadeIn .3s var(--ease-out) both; }
+.animate-up     { animation: slideUp .35s var(--ease-out) both; }
+.animate-scale  { animation: scaleIn .3s var(--ease-spring) both; }
+
+/* ─── UTILITY CLASSES ────────────────────────────── */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
