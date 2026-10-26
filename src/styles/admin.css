@@ -1,0 +1,50 @@
+/* Admin dashboard. Own "ad-" class names so it never collides with the app styles. */
+.ad { max-width: 72rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; color: var(--ink, #f6f3ff); font-family: var(--body, system-ui, sans-serif); }
+.ad-narrow { max-width: 26rem; padding-top: 12vh; }
+.ad h1 { margin: 0; font-family: var(--display, system-ui); font-size: 1.7rem; color: var(--yellow, #ffe14d); }
+.ad-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.ad-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-bottom: .9rem; }
+.ad-row input { flex: 1; min-width: 12rem; }
+.ad-dim { color: var(--muted, #aab4ec); font-size: .9rem; }
+.ad-foot { margin-top: 1.5rem; }
+.ad-err { color: var(--err, #ff8a8a); background: rgba(255, 138, 138, .1); border-radius: 10px; padding: .6rem .8rem; }
+.ad-badge { background: var(--pink, #ff4fa3); color: #fff; border-radius: 999px; padding: .2rem .7rem; font-size: .8rem; font-weight: 700; }
+
+.ad input, .ad select { background: rgba(0, 0, 0, .28); border: 2px solid rgba(255, 255, 255, .2); border-radius: 10px; padding: .55rem .8rem; color: inherit; font: inherit; }
+.ad input:focus, .ad select:focus { outline: none; border-color: var(--yellow, #ffe14d); }
+.ad-form { display: grid; gap: .7rem; margin-bottom: 1rem; }
+.ad-form label { display: grid; gap: .3rem; color: var(--muted, #aab4ec); font-size: .9rem; }
+.ad-songform { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); background: var(--panel, rgba(255, 255, 255, .07)); border-radius: 14px; padding: 1rem; }
+.ad-songform strong, .ad-songform .ad-row { grid-column: 1 / -1; margin: 0; }
+
+.ad-btn { cursor: pointer; border: 0; border-radius: 999px; padding: .55rem 1.1rem; font: inherit; font-weight: 700; background: var(--yellow, #ffe14d); color: var(--blue-deep, #0a1650); }
+.ad-btn.small { padding: .3rem .8rem; font-size: .85rem; }
+.ad-btn.ghost { background: transparent; color: inherit; border: 2px solid var(--muted, #aab4ec); }
+.ad-btn.danger { background: var(--pink, #ff4fa3); color: #fff; }
+.ad-link { cursor: pointer; background: none; border: 0; padding: 0 .2rem; font: inherit; font-size: .85rem; color: var(--yellow, #ffe14d); text-decoration: underline; }
+.ad-link.danger { color: var(--err, #ff8a8a); }
+.ad-inline { display: inline-flex; gap: .4rem; align-items: center; }
+.ad-inline input { width: 10rem; padding: .3rem .6rem; }
+
+.ad-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .8rem; margin-bottom: 1.4rem; }
+.ad-card { background: var(--panel, rgba(255, 255, 255, .07)); border-radius: 14px; padding: .9rem 1rem; }
+.ad-card b { display: block; font-family: var(--display, system-ui); font-size: 2rem; line-height: 1.1; color: var(--yellow, #ffe14d); }
+.ad-card span { color: var(--muted, #aab4ec); font-size: .85rem; }
+
+.ad-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
+.ad-tabs button { cursor: pointer; border: 0; border-radius: 999px; padding: .5rem 1.1rem; font: inherit; font-weight: 700; background: var(--panel, rgba(255, 255, 255, .07)); color: var(--muted, #aab4ec); }
+.ad-tabs button[aria-selected='true'] { background: var(--yellow, #ffe14d); color: var(--blue-deep, #0a1650); }
+
+.ad-scroll { overflow-x: auto; }
+.ad-table { width: 100%; border-collapse: collapse; min-width: 40rem; }
+.ad-table th { text-align: left; font-size: .8rem; font-weight: 600; color: var(--muted, #aab4ec); padding: .5rem .6rem; border-bottom: 1px solid rgba(255, 255, 255, .15); }
+.ad-table td { padding: .6rem; border-bottom: 1px solid rgba(255, 255, 255, .08); vertical-align: middle; }
+.ad-actions { white-space: nowrap; text-align: right; }
+.ad-actions .ad-btn + .ad-btn { margin-left: .4rem; }
+.ad-code { font-family: var(--display, system-ui); letter-spacing: .1em; background: var(--pink, #ff4fa3); color: #fff; border-radius: 8px; padding: .15rem .5rem; }
+.ad-code.small { font-size: .8rem; letter-spacing: .04em; }
+.ad-sub td { background: rgba(0, 0, 0, .18); }
+.ad-users { display: grid; gap: .5rem; padding: .3rem 0; }
+.ad-user { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap; }
+.ad-dot { width: .6rem; height: .6rem; border-radius: 50%; background: #6b76b8; flex: none; }
+.ad-dot.on { background: #3ddc84; }

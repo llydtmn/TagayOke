@@ -3,6 +3,7 @@ import { MemoryRouter, Routes, Route, Navigate, useLocation } from 'react-router
 import Landing from './pages/Landing';
 import Host from './pages/Host';
 import Remote from './pages/Remote';
+import Admin from './pages/Admin';
 
 // The address bar always stays at the plain site address (no "#/r/ABCD").
 // QR / shared links still carry the room in the hash (#/r/ABCD): we read it once on load, then clear it.
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/host/:code" element={<Host />} />
         <Route path="/r/:code" element={<Remote />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </MemoryRouter>

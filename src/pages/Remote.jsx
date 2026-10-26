@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services';
+import { joinRoom, pingRoom } from '../services/presence';
 import { useQueue } from '../hooks/useQueue';
 import SongBook from '../components/SongBook';
 import QueueList from '../components/QueueList';
@@ -19,6 +20,14 @@ export default function Remote() {
   const { queue, nowPlaying, add, error } = useQueue(code);
 
   useEffect(() => { api.roomExists(code).then(setExists); }, [code]);
+
+  // Lets the admin dashboard count this phone as a user of the room.
+  useEffect(() => {
+    if (!name || exists !== true) return undefined;
+    joinRoom(code, name).catch(() => {});
+    const timer = setInterval(() => pingRoom(code).catch(() => {}), 30000);
+    return () => clearInterval(timer);
+  }, [code, name, exists]);
 
   // If the host ends the session (room deleted), send everyone back to the home page.
   useEffect(() => {
