@@ -1180,3 +1180,20 @@ input:focus {
 .yt-frame { position: relative; }
 .yt-slot, .yt-slot > div, .yt-slot iframe { width: 100%; height: 100%; }
 .yt-shield { position: absolute; inset: 0; z-index: 5; cursor: default; }
+
+/* ================================
+   LANDING + HOST BACKGROUND PHOTO
+   (full-screen photo behind the page; light navy tint keeps text readable)
+================================ */
+
+.landing::before,
+.host::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
+    url("/boli-fam.jpg") center / 100% 100% no-repeat;
+}
