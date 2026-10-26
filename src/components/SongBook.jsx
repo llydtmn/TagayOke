@@ -44,7 +44,7 @@ export default function SongBook({ onReserve }) {
     <section>
       <label className="field">
         <span>Song number, title or artist</span>
-        <input inputMode="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Try 10003 or Eraserheads" />
+        <input inputMode="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a Song..." />
       </label>
       {exact && <button className="primary wide" onClick={() => onReserve(exact)}>Reserve #{exact.code} {exact.title}</button>}
       <ul className="songs">

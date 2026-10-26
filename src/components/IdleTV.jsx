@@ -81,7 +81,7 @@ export default function IdleTV({ roomCode }) {
         </div>
         <div className="tv-panel" aria-hidden="true">
           <span className="tv-led" />
-          <span className="tv-brand">TagayOke</span>
+          <span className="tv-brand">Tagay-Oke!</span>
           <span className="tv-knobs"><i /><i /></span>
         </div>
       </div>
