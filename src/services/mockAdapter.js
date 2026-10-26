@@ -25,11 +25,15 @@ export async function addSong({ youtubeId, title, artist }) {
   return song;
 }
 
-export async function listSongs(q = '') {
+// Sorted A to Z by title (then code).
+const byTitle = (a, b) =>
+  a.title.localeCompare(b.title, undefined, { sensitivity: 'base', ignorePunctuation: true }) || a.code - b.code;
+
+export async function listSongs(q = '', offset = 0, limit = 100) {
   const s = q.trim().toLowerCase();
-  if (!s) return allSongs();
-  return allSongs().filter((x) =>
+  const list = !s ? allSongs() : allSongs().filter((x) =>
     String(x.code).includes(s) || x.title.toLowerCase().includes(s) || x.artist.toLowerCase().includes(s));
+  return list.sort(byTitle).slice(offset, offset + limit);
 }
 export async function searchOnline() {
   throw new Error('YouTube search needs the Supabase edge function. Connect Supabase to enable it.');

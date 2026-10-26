@@ -16,13 +16,7 @@ export default function Host() {
 
   useEffect(() => { api.roomExists(code).then(setExists); }, [code]);
 
-  // When the host closes the tab or browser, delete the room so everyone else gets sent home.
-  useEffect(() => {
-    const onExit = () => api.closeRoomOnExit(code);
-    window.addEventListener('pagehide', onExit);
-    return () => window.removeEventListener('pagehide', onExit);
-  }, [code]);
-
+  // The room only ends when the host presses "End session". Refreshing the page keeps it alive.
   const endSession = async () => {
     try { await api.closeRoom(code); } catch { /* room may already be gone */ }
     nav('/', { replace: true });

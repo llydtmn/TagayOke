@@ -10,8 +10,9 @@ const toSong = (r) => ({
 const toItem = (r) => ({ id: r.id, singer: r.singer, status: r.status, song: toSong(r.song) });
 const check = ({ data, error }) => { if (error) throw error; return data; };
 
-export async function listSongs(q = '') {
-  let query = supabase.from('songs').select('*').order('code').limit(200);
+// Sorted A to Z by title (then code, so paging stays stable when titles repeat).
+export async function listSongs(q = '', offset = 0, limit = 100) {
+  let query = supabase.from('songs').select('*').order('title').order('code').range(offset, offset + limit - 1);
   const s = q.trim().replace(/[,()%]/g, ' ');
   if (s) query = /^\d+$/.test(s) ? query.eq('code', Number(s)) : query.or(`title.ilike.%${s}%,artist.ilike.%${s}%`);
   return check(await query).map(toSong);
