@@ -59,8 +59,21 @@
 
 /* light content panel */
 .ad-panelwrap { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--ink, #f6f3ff); color: var(--ad-text); border-radius: 1.6rem; padding: 1.4rem; min-width: 0; }
-.ad-grid { display: grid; grid-template-columns: minmax(0, 1fr) clamp(18rem, 24vw, 23rem); gap: 1.4rem; align-items: start; }
-.ad-left, .ad-right { display: grid; gap: 1.1rem; min-width: 0; }
+.ad-panelwrap { display: flex; flex-direction: column; }
+.ad-panelwrap > .ad-err { flex: none; }
+.ad-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(18rem, 24vw, 23rem); grid-template-rows: minmax(0, 1fr); gap: 1.4rem; align-items: stretch; }
+.ad-left, .ad-right { min-width: 0; min-height: 0; }
+/* left: greeting stays put, the main card (Access codes / Song catalog / Hosts) scrolls inside itself */
+.ad-left { display: flex; flex-direction: column; gap: 1.1rem; }
+.ad-left > .ad-hero { flex: none; }
+.ad-left > .ad-card-panel { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* right: stat tiles; only scrolls if the window is very short */
+.ad-right { display: grid; gap: 1.1rem; align-content: start; overflow-y: auto; }
+
+/* slim scrollbar for the scrolling card */
+.ad-card-panel { scrollbar-width: thin; scrollbar-color: rgba(10, 22, 80, .3) transparent; }
+.ad-card-panel::-webkit-scrollbar { width: 8px; }
+.ad-card-panel::-webkit-scrollbar-thumb { background: rgba(10, 22, 80, .3); border-radius: 8px; }
 
 /* greeting banner */
 .ad-hero { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--yellow, #ffe14d); color: var(--blue-deep, #0a1650); border-radius: 1.2rem; padding: 1.5rem 1.6rem; }
@@ -178,29 +191,85 @@ td.ad-actions .ad-btn + .ad-btn { margin-left: .4rem; }
 .ad-auth-card .ad-form { margin: 0; }
 
 /* ---------- responsive ---------- */
+
+/* Tablet / small laptop: one column. The card gets a fixed height so it still scrolls on its own;
+   the stat tiles sit below it and the panel scrolls to reach them. */
 @media (max-width: 70rem) {
-  .ad-grid { grid-template-columns: minmax(0, 1fr); }
-  .ad-right { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+  .ad-panelwrap { display: block; }
+  .ad-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 1.1rem; }
+  .ad-left { display: flex; }
+  .ad-left > .ad-card-panel { flex: none; height: max(22rem, calc(100dvh - 21rem)); }
+  .ad-right { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); overflow: visible; }
   .ad-side-panel { grid-column: 1 / -1; }
 }
+
+/* Phones (Android / iPhone): everything fits the screen width, no sideways scrolling.
+   Top bar stays fixed, the middle scrolls, and the main card scrolls on its own. */
 @media (max-width: 52rem) {
-  .ad-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; height: auto; min-height: 100dvh; overflow: visible; padding: .6rem; }
-  .ad-main { height: auto; }
-  .ad-side { overflow: visible; padding: .4rem .4rem .8rem; }
-  .ad-panelwrap { overflow: visible; }
-  .ad-side { flex-direction: row; flex-wrap: wrap; align-items: center; gap: .6rem; }
-  .ad-nav { display: flex; gap: .3rem; margin: 0; order: 3; width: 100%; overflow-x: auto; }
-  .ad-nav button { width: auto; white-space: nowrap; padding: .55rem .8rem; }
-  .ad-side-foot { margin: 0 0 0 auto; display: flex; gap: .3rem; }
+  .ad-shell { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; padding: .5rem; gap: .3rem; }
+  .ad-side { flex: none; overflow: visible; flex-direction: row; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .2rem .2rem .3rem; }
+  .ad-brand { padding: 0; }
+  .ad-brand-mark { width: 2.2rem; height: 2.2rem; border-radius: .65rem; }
+  .ad-nav { display: flex; gap: .3rem; margin: 0; order: 3; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .ad-nav::-webkit-scrollbar { display: none; }
+  .ad-nav button { width: auto; flex: 1 1 0; justify-content: center; white-space: nowrap; padding: .5rem .6rem; font-size: .88rem; }
+  .ad-side-foot { margin: 0 0 0 auto; display: flex; gap: .2rem; }
   .ad-side-foot p { display: none; }
-  .ad-navlink { width: auto; padding: .5rem .7rem; font-size: .85rem; }
-  .ad-topbar { padding: .2rem .2rem .8rem; }
+  .ad-navlink { width: auto; padding: .45rem .6rem; font-size: .82rem; }
+
+  .ad-main { flex: 1 1 0; height: auto; min-height: 0; }
+  .ad-topbar { padding: .1rem 0 .5rem; gap: .6rem; }
+  .ad-search { flex: 1 1 auto; padding: .5rem .8rem; }
   .ad-me-name { display: none; }
-  .ad-panelwrap { padding: .8rem; border-radius: 1.2rem; }
-  .ad-hero { padding: 1.1rem; }
-  .ad-hero-art { display: none; }
-  .ad-hero h1 { font-size: 1.5rem; }
-  .ad-item { gap: .6rem; }
-  .ad-item-sub { padding-left: 1rem; }
+  .ad-avatar { width: 2.2rem; height: 2.2rem; }
+
+  .ad-panelwrap { flex: 1 1 0; display: block; overflow-y: auto; overflow-x: hidden; padding: .7rem; border-radius: 1.2rem; }
+  .ad-grid { gap: .8rem; }
+  .ad-left { gap: .8rem; }
+
+  /* slim greeting: title + button on one row */
+  .ad-hero { padding: .8rem 1rem; }
+  .ad-hero-art, .ad-hero p { display: none; }
+  .ad-hero-text { max-width: none; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+  .ad-hero h1 { font-size: 1.25rem; }
+  .ad-hero .ad-btn { padding: .45rem .8rem; font-size: .85rem; white-space: nowrap; }
+
+  /* the main card: fixed height, scrolls inside itself */
+  .ad-left > .ad-card-panel { height: max(20rem, calc(100dvh - 17rem)); padding: .9rem; }
+  .ad-songform { grid-template-columns: minmax(0, 1fr); padding: .8rem; }
+  .ad-row input { min-width: 0; flex: 1 1 100%; }
+  .ad-inline input { width: 100%; }
+
+  /* stat tiles: three small ones in a row */
+  .ad-right { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+  .ad-stat { flex-direction: column; text-align: center; gap: .3rem; padding: .7rem .3rem; }
+  .ad-stat-ico { width: 2.1rem; height: 2.1rem; border-radius: .65rem; }
+  .ad-stat b { font-size: 1.4rem; }
+  .ad-stat span:not(.ad-stat-ico) { font-size: .75rem; }
+
+  /* hosts list */
+  .ad-item { gap: .5rem; }
+  .ad-item-sub { padding-left: .8rem; }
+  .ad-stats { gap: .7rem; }
   .ad-actions { justify-content: flex-start; width: 100%; }
+
+  /* tables turn into stacked cards, so nothing needs sideways scrolling */
+  .ad-scroll { overflow-x: visible; }
+  .ad-table { display: block; min-width: 0; }
+  .ad-table thead { display: none; }
+  .ad-table tbody { display: grid; gap: .6rem; }
+  .ad-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .8rem; padding: .8rem; border: 1px solid var(--ad-line); border-radius: 12px; background: #fff; }
+  .ad-table tbody tr:hover { background: #fff; }
+  .ad-table td { display: block; padding: 0; border: 0; min-width: 0; overflow-wrap: anywhere; }
+  .ad-table td:first-child, .ad-table td.ad-song-title, .ad-table td.ad-actions { grid-column: 1 / -1; }
+  .ad-table td[data-label]::before { content: attr(data-label); display: block; font-size: .7rem; font-weight: 700; color: var(--ad-sub); }
+  .ad-table td.ad-song-title { font-weight: 700; }
+  .ad-table td.ad-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .4rem; padding-top: .2rem; }
+  .ad-table td.ad-actions .ad-btn + .ad-btn { margin-left: 0; }
+
+  .ad-auth-card { padding: 1.4rem; }
+}
+
+@media (max-width: 24rem) {
+  .ad-brand-name { display: none; }
 }

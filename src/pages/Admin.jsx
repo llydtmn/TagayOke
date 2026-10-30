@@ -273,11 +273,11 @@ function Codes({ setErr, filter }) {
               return (
                 <tr key={c.id}>
                   <td><span className="ad-code">{c.code}</span></td>
-                  <td>{c.label || <span className="ad-dim">—</span>}</td>
-                  <td>{formatDuration(c.duration_seconds ?? c.duration_minutes * 60)}</td>
-                  <td>{c.uses}/{c.max_uses}</td>
-                  <td><span className={`ad-status ${tone}`}>{st}</span></td>
-                  <td>{ago(c.created_at)}</td>
+                  <td data-label="Label">{c.label || <span className="ad-dim">—</span>}</td>
+                  <td data-label="Length">{formatDuration(c.duration_seconds ?? c.duration_minutes * 60)}</td>
+                  <td data-label="Used">{c.uses}/{c.max_uses}</td>
+                  <td data-label="Status"><span className={`ad-status ${tone}`}>{st}</span></td>
+                  <td data-label="Created">{ago(c.created_at)}</td>
                   <td className="ad-actions">
                     <button className="ad-btn ghost small" onClick={() => flashCopy(c.code)}>{copied === c.code ? 'Copied' : 'Copy'}</button>
                     <button className="ad-btn ghost small" onClick={() => run(() => admin.setCodeRevoked(c.id, !c.revoked))}>{c.revoked ? 'Restore' : 'Revoke'}</button>
@@ -334,8 +334,8 @@ function Songs({ setErr, q }) {
             {rows.map((s) => (
               <tr key={s.id}>
                 <td><span className="ad-code small">{s.code}</span></td>
-                <td>{s.title}</td><td>{s.artist}</td><td>{s.language}</td>
-                <td>{s.youtube_id ? 'Yes' : <span className="ad-dim">No</span>}</td>
+                <td className="ad-song-title">{s.title}</td><td data-label="Artist">{s.artist}</td><td data-label="Language">{s.language}</td>
+                <td data-label="Video">{s.youtube_id ? 'Yes' : <span className="ad-dim">No</span>}</td>
                 <td className="ad-actions">
                   <button className="ad-btn ghost small" onClick={() => { setForm({ id: s.id, title: s.title, artist: s.artist, youtube_id: s.youtube_id || '', language: s.language || 'Other' }); document.getElementById('ad-song-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}>Edit</button>
                   <button className="ad-btn danger small" onClick={() => window.confirm(`Delete #${s.code} ${s.title}?`) && run(() => admin.deleteSong(s.id))}>Delete</button>
