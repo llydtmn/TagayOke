@@ -49,7 +49,7 @@ export default function YouTubePlayer({ videoId, onEnded }) {
       if (dead) return;
       player = new YT.Player(host.current, {
         videoId, width: '100%', height: '100%',
-        playerVars: { autoplay: 1, rel: 0, playsinline: 1 },
+        playerVars: { autoplay: 1, rel: 0, playsinline: 1, fs: 0 },
         events: {
           onReady: () => { timer = setInterval(tick, 250); },
           onStateChange: (e) => e.data === YT.PlayerState.ENDED && finish(),

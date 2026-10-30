@@ -1197,3 +1197,110 @@ input:focus {
     linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
     url("/boli-fam.jpg") center / 100% 100% no-repeat;
 }
+/* ---- Fullscreen: reserved-songs bar across the top, like a traditional videoke ---- */
+.stage-screen { position: relative; }
+
+.stage-screen:fullscreen,
+.stage-screen:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+}
+
+.reserved-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1.5vw, 1.5rem);
+  padding: clamp(0.4rem, 0.8vw, 0.9rem) clamp(0.6rem, 1.5vw, 1.5rem);
+  background: linear-gradient(to bottom, rgba(10, 22, 80, 0.92), rgba(10, 22, 80, 0.78));
+  border-bottom: 3px solid var(--yellow);
+  color: var(--ink);
+  pointer-events: none; /* never blocks the video underneath */
+}
+
+.reserved-count {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+}
+
+.reserved-label {
+  font-family: var(--display);
+  font-size: clamp(0.8rem, 1.4vw, 1.5rem);
+  color: var(--yellow);
+  letter-spacing: 0.08em;
+}
+
+.reserved-num {
+  min-width: 2.2em;
+  padding: 0.1em 0.5em;
+  text-align: center;
+  font-family: var(--display);
+  font-size: clamp(0.9rem, 1.6vw, 1.7rem);
+  background: var(--pink);
+  color: #fff;
+  border-radius: 999px;
+}
+
+.reserved-list {
+  display: flex;
+  gap: clamp(0.8rem, 2vw, 2rem);
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.reserved-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  min-width: 0;
+  font-size: clamp(0.8rem, 1.3vw, 1.4rem);
+  white-space: nowrap;
+}
+
+.reserved-list li:not(.reserved-more) { flex: 0 1 auto; }
+
+.reserved-pos {
+  font-family: var(--display);
+  color: var(--yellow);
+}
+
+.reserved-code { color: var(--muted); }
+
+.reserved-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reserved-singer {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reserved-singer::before { content: "· "; }
+
+.reserved-more {
+  flex: none;
+  color: var(--yellow);
+  font-weight: 700;
+}
+
+.reserved-empty {
+  margin: 0;
+  font-size: clamp(0.8rem, 1.3vw, 1.4rem);
+  color: var(--muted);
+}

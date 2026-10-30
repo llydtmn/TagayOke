@@ -32,7 +32,7 @@ export default function Host() {
   return (
     <main className="host">
       <div className="host-main">
-        <Stage item={nowPlaying} roomCode={code} onEnded={advance} />
+        <Stage item={nowPlaying} roomCode={code} onEnded={advance} upNext={upNext} />
         {!started && (
           <div className="gate">
             <button className="primary big" onClick={() => setStarted(true)}>Start the session</button>
