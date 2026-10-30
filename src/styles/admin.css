@@ -183,6 +183,54 @@ td.ad-actions .ad-btn + .ad-btn { margin-left: .4rem; }
 .ad-mini b { display: block; font-family: var(--display, system-ui); font-weight: 400; font-size: 1.3rem; color: var(--blue, #1b30a8); line-height: 1.1; }
 .ad-mini span { font-size: .78rem; color: var(--ad-sub); }
 
+
+/* ---------- reports & analytics ---------- */
+.ad-reports, .ad-settings { display: grid; gap: 1rem; }
+.ad-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .7rem; }
+.ad-kpi { background: var(--ad-soft); border-radius: 1rem; padding: .9rem 1rem; }
+.ad-kpi b { display: block; font-family: var(--display, system-ui); font-weight: 400; font-size: 1.6rem; line-height: 1.1; color: var(--blue, #1b30a8); overflow-wrap: anywhere; }
+.ad-kpi span { font-size: .8rem; color: var(--ad-sub); font-weight: 600; }
+.ad-rgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+.ad-rcard { border: 1px solid var(--ad-line); border-radius: 1rem; padding: 1rem 1.1rem; min-width: 0; background: #fff; }
+.ad-rhead { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
+.ad-rhead h3 { margin: 0; font-size: 1rem; font-weight: 800; color: var(--ad-text); display: flex; align-items: center; gap: .45rem; }
+.ad-rsub { margin: 1rem 0 .5rem; font-size: .85rem; color: var(--ad-sub); font-weight: 700; }
+.ad-lead { margin: -.3rem 0 .9rem; }
+.ad-rfoot { align-items: flex-start; margin: 0; }
+.ad-rfoot .ad-dim { flex: 1 1 14rem; font-size: .8rem; }
+
+.ad-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.ad-bars li { display: grid; grid-template-columns: minmax(5rem, 9rem) minmax(0, 1fr) 2.2rem; gap: .6rem; align-items: center; font-size: .88rem; }
+.ad-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ad-bar-track { height: .7rem; background: var(--ad-soft); border-radius: 999px; overflow: hidden; }
+.ad-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--blue, #1b30a8); }
+.ad-bar-fill.pink { background: var(--pink, #ff4fa3); }
+.ad-bar-val { text-align: right; font-variant-numeric: tabular-nums; }
+
+.ad-cols { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: .3rem; height: 9rem; align-items: end; }
+.ad-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: .2rem; min-width: 0; }
+.ad-col b { font-size: .72rem; min-height: .9rem; }
+.ad-col-bar { width: 100%; max-width: 1.6rem; background: var(--yellow, #ffe14d); border: 2px solid var(--blue-deep, #0a1650); border-radius: .4rem .4rem 0 0; }
+.ad-col small { font-size: .65rem; color: var(--ad-sub); }
+.ad-mini2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.ad-mini2 div { background: var(--ad-soft); border-radius: .8rem; padding: .6rem .8rem; }
+.ad-mini2 b { display: block; font-family: var(--display, system-ui); font-weight: 400; font-size: 1.4rem; color: var(--blue, #1b30a8); line-height: 1.1; }
+.ad-mini2 b small { font-size: .8rem; color: var(--ad-sub); }
+.ad-mini2 span { font-size: .78rem; color: var(--ad-sub); }
+
+/* ---------- settings ---------- */
+.ad-card-panel textarea { background: #fff; border: 2px solid var(--ad-line); border-radius: 10px; padding: .55rem .8rem; color: var(--ad-text); font: inherit; min-width: 0; resize: vertical; width: 100%; box-sizing: border-box; }
+.ad-card-panel textarea:focus { outline: none; border-color: var(--blue, #1b30a8); }
+.ad-count { text-align: right; }
+.ad-settings .ad-form { margin-bottom: 0; }
+.ad-settings .ad-row { margin-bottom: 0; }
+/* preview mimics the landing page background so the dropdown reads as it will for guests */
+.ad-preview { position: relative; background: linear-gradient(160deg, var(--blue, #1b30a8), var(--blue-deep, #0a1650)); border-radius: 1rem; padding: 1rem; min-height: 9rem; }
+.ad-preview .announce { position: static; }
+.ad-preview.off .announce { opacity: .55; }
+.ad-preview .ad-dim { color: var(--muted, #aab4ec); }
+.ad-prev-note { margin: .8rem 0 0; font-size: .8rem; }
+
 /* ---------- login / no-access ---------- */
 .ad-auth { display: grid; place-items: center; min-height: 100vh; padding: 1.5rem; color: var(--ink, #f6f3ff); }
 .ad-auth-card { width: 100%; max-width: 26rem; display: grid; gap: 1rem; background: var(--ink, #f6f3ff); color: var(--ad-text); border-radius: 1.6rem; padding: 2rem; box-shadow: 0 30px 70px rgba(0, 0, 0, .4); }
@@ -268,6 +316,13 @@ td.ad-actions .ad-btn + .ad-btn { margin-left: .4rem; }
   .ad-table td.ad-actions .ad-btn + .ad-btn { margin-left: 0; }
 
   .ad-auth-card { padding: 1.4rem; }
+}
+
+@media (max-width: 52rem) {
+  .ad-nav button { padding: .5rem .55rem; font-size: .8rem; }
+  .ad-nav button .ad-icon { display: none; }
+  .ad-cols { gap: .15rem; }
+  .ad-bars li { grid-template-columns: minmax(4rem, 7rem) minmax(0, 1fr) 2rem; }
 }
 
 @media (max-width: 24rem) {

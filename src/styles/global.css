@@ -212,6 +212,7 @@ input:focus {
 ================================ */
 
 .landing {
+  position: relative;
   width: 100%;
   max-width: 34rem;
   min-width: 0;
@@ -1452,3 +1453,83 @@ input:focus {
 /* DEBUG: uncomment to see where the button is
 .admin-secret { opacity: 1; background: rgba(255, 0, 0, 0.35); }
 */
+
+
+/* ================================
+   ANNOUNCEMENT (landing page dropdown)
+================================ */
+
+.announce {
+  position: absolute;
+  top: 1rem;
+  left: 1.4rem;
+  right: 1.4rem;
+  z-index: 6;
+}
+
+.announce-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(10, 22, 80, 0.78);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.announce-head:hover { background: rgba(10, 22, 80, 0.9); }
+.announce-head:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.announce.open .announce-head { border-radius: 1.2rem 1.2rem 0 0; }
+
+.announce-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.announce-dot {
+  position: relative;
+  flex: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #ff3b3b;
+  box-shadow: 0 0 8px #ff3b3b;
+}
+.announce-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ff3b3b;
+  animation: announce-pulse 1.6s ease-out infinite;
+}
+@keyframes announce-pulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(2.8); opacity: 0; }
+}
+
+.announce-chev { flex: none; transition: transform 0.2s ease; }
+.announce.open .announce-chev { transform: rotate(180deg); }
+
+.announce-body {
+  padding: 0.8rem 1.1rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-top: 0;
+  border-radius: 0 0 1.2rem 1.2rem;
+  background: rgba(10, 22, 80, 0.94);
+  color: var(--ink);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+}
+.announce-body[hidden] { display: none; }
+.announce-body p { margin: 0; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.announce-body small { display: block; margin-top: 0.6rem; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .announce-dot::after { animation: none; }
+  .announce-chev { transition: none; }
+}

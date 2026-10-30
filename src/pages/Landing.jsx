@@ -4,6 +4,7 @@ import { api } from '../services';
 import { APP_NAME, TAGLINE, USE_MOCK } from '../config/env';
 import { normalizeAccessCode, accessKey } from '../utils/hostCode';
 import { enterPageFullscreen, exitPageFullscreen } from '../utils/fullscreen';
+import Announcement from '../components/Announcement';
 
 export default function Landing() {
   const nav = useNavigate();
@@ -37,6 +38,7 @@ export default function Landing() {
 
   return (
     <main className="landing">
+      <Announcement />
       <h1 className="logo">{APP_NAME}</h1>
       <p className="tagline">{TAGLINE}</p>
       <p className="lede">Reserve songs from your phone while someone else is mid-chorus. Numbered songs, a song book and a queue, like the real machine.</p>

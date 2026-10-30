@@ -1,6 +1,8 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as admin from '../services/admin';
+import { getAnnouncement, saveAnnouncement } from '../services/settings';
+import { AnnouncementView } from '../components/Announcement';
 import { parseYouTubeId } from '../utils/youtube';
 import { formatDuration, formatLeft } from '../utils/hostCode';
 import '../styles/admin.css';
@@ -29,6 +31,10 @@ const ICONS = {
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   mic: <><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v4" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
+  chart: <><path d="M3 3v18h18" /><path d="M8 16v-5M13 16V7M18 16v-8" /></>,
+  gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></>,
+  megaphone: <><path d="M3 11v2a1 1 0 001 1h3l8 5V5L7 10H4a1 1 0 00-1 1z" /><path d="M18.5 9a4 4 0 010 6" /></>,
+  download: <><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 21h16" /></>,
 };
 function Icon({ name, size = 20 }) {
   return (
@@ -146,10 +152,21 @@ function Users({ code, users, live, act }) {
   );
 }
 
-function Hosts({ data, act, filter }) {
+function Hosts({ data, act, filter, setErr }) {
   const [name, setName] = useState('');
-  const [minutes, setMinutes] = useState(0);
+  const [minutes, setMinutes] = useState(0);  // 0 = unlimited
   const [open, setOpen] = useState(null);
+  const [fresh, setFresh] = useState(null);    // the code just generated, shown big so it can be copied
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const makeCode = async (e) => {
+    e.preventDefault(); setBusy(true);
+    try {
+      const label = name.trim();
+      const code = await admin.createCode({ label, seconds: Number(minutes) ? Number(minutes) * 60 : null, maxUses: 1, redeemByHours: 0 });
+      setFresh({ code, label, minutes: Number(minutes) }); setName('');
+    } catch (x) { setErr(x.message || String(x)); } finally { setBusy(false); }
+  };
   const now = Date.now();
   const usersOf = (c) => data.people.filter((p) => p.room_code === c);
   const queuedOf = (c) => data.queue.filter((q) => q.room_code === c).length;
@@ -158,16 +175,24 @@ function Hosts({ data, act, filter }) {
   const rooms = f ? data.rooms.filter((r) => `${r.code} ${r.name || ''}`.toLowerCase().includes(f)) : data.rooms;
   return (
     <>
-      <form className="ad-row" onSubmit={(e) => { e.preventDefault(); act(admin.createRoom)(name.trim(), Number(minutes)); setName(''); }}>
-        <input placeholder="New host name (optional)" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} />
+      <form className="ad-row" onSubmit={makeCode}>
+        <input placeholder="Host name (optional)" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} />
         <select value={minutes} onChange={(e) => setMinutes(e.target.value)} aria-label="Time limit">
-          <option value={0}>No time limit</option><option value={60}>1 hour</option><option value={120}>2 hours</option>
+          <option value={0}>Unlimited time</option><option value={60}>1 hour</option><option value={120}>2 hours</option>
           <option value={180}>3 hours</option><option value={360}>6 hours</option>
         </select>
-        <button className="ad-btn">Create host</button>
+        <button className="ad-btn" disabled={busy}>Generate host code</button>
       </form>
+      {fresh && (
+        <div className="ad-fresh">
+          <span className="ad-dim">{fresh.label ? `Code for ${fresh.label}: ` : ''}give this to the host. They type it under "Host on this screen". {fresh.minutes ? `Their ${fresh.minutes / 60}-hour clock starts when they enter it.` : 'It has no time limit.'}</span>
+          <b className="ad-bigcode">{fresh.code}</b>
+          <button className="ad-btn small" onClick={async () => { if (await copy(fresh.code)) { setCopied(true); setTimeout(() => setCopied(false), 1500); } }}>{copied ? 'Copied' : 'Copy'}</button>
+          <button className="ad-link" onClick={() => setFresh(null)}>Dismiss</button>
+        </div>
+      )}
       {!data.rooms.length ? (
-        <p className="ad-dim">No hosts right now. One appears when someone enters an access code on "Host on this screen".</p>
+        <p className="ad-dim">No hosts right now. Generate a host code above and give it to the host; their room appears here once they enter it on "Host on this screen".</p>
       ) : !rooms.length ? (
         <p className="ad-dim">No hosts match "{filter}".</p>
       ) : (
@@ -205,7 +230,8 @@ function Hosts({ data, act, filter }) {
   );
 }
 
-const UNITS = [[1, 'Seconds'], [60, 'Minutes'], [3600, 'Hours']]; // [seconds in one unit, label]
+const codeSeconds = (c) => c.duration_seconds ?? (c.duration_minutes != null ? c.duration_minutes * 60 : null); // null = unlimited
+const UNITS = [[1, 'Seconds'], [60, 'Minutes'], [3600, 'Hours'], [0, 'Unlimited']]; // [seconds in one unit, label]
 const MAX_SECONDS = 24 * 3600;
 const REDEEM_BY = [[0, 'Any time'], [1, 'Within 1 hour'], [24, 'Within 24 hours'], [168, 'Within 7 days']];
 
@@ -234,8 +260,8 @@ function Codes({ setErr, filter }) {
 
   const create = (e) => {
     e.preventDefault();
-    const seconds = Math.round(Number(amount) * Number(unit));
-    if (!(seconds >= 1 && seconds <= MAX_SECONDS)) { setErr('Session length must be between 1 second and 24 hours.'); return; }
+    const seconds = Number(unit) === 0 ? null : Math.round(Number(amount) * Number(unit));
+    if (seconds !== null && !(seconds >= 1 && seconds <= MAX_SECONDS)) { setErr('Session length must be between 1 second and 24 hours.'); return; }
     return run(async () => {
       const code = await admin.createCode({ label: label.trim(), seconds, maxUses: Number(maxUses), redeemByHours: Number(redeemBy) });
       setFresh(code); setLabel('');
@@ -249,7 +275,7 @@ function Codes({ setErr, filter }) {
         <label>Label (who is it for?)<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Maria's birthday" maxLength={40} /></label>
         <label>Session length
           <span className="ad-duration">
-            <input type="number" min="1" step="any" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 30" required />
+            <input type="number" min="1" step="any" inputMode="decimal" value={unit === 0 ? '' : amount} onChange={(e) => setAmount(e.target.value)} placeholder={unit === 0 ? 'No time limit' : 'e.g. 30'} disabled={unit === 0} required={unit !== 0} />
             <select value={unit} onChange={(e) => setUnit(Number(e.target.value))} aria-label="Unit of time">{UNITS.map(([s, t]) => <option key={s} value={s}>{t}</option>)}</select>
           </span>
         </label>
@@ -259,7 +285,7 @@ function Codes({ setErr, filter }) {
       </form>
       {fresh && (
         <div className="ad-fresh">
-          <span className="ad-dim">Give this code to the host. The clock starts when they enter it.</span>
+          <span className="ad-dim">Give this code to the host. Any session clock starts when they enter it.</span>
           <b className="ad-bigcode">{fresh}</b>
           <button className="ad-btn small" onClick={() => flashCopy(fresh)}>{copied === fresh ? 'Copied' : 'Copy'}</button>
         </div>
@@ -274,7 +300,7 @@ function Codes({ setErr, filter }) {
                 <tr key={c.id}>
                   <td><span className="ad-code">{c.code}</span></td>
                   <td data-label="Label">{c.label || <span className="ad-dim">—</span>}</td>
-                  <td data-label="Length">{formatDuration(c.duration_seconds ?? c.duration_minutes * 60)}</td>
+                  <td data-label="Length">{codeSeconds(c) == null ? 'Unlimited' : formatDuration(codeSeconds(c))}</td>
                   <td data-label="Used">{c.uses}/{c.max_uses}</td>
                   <td data-label="Status"><span className={`ad-status ${tone}`}>{st}</span></td>
                   <td data-label="Created">{ago(c.created_at)}</td>
@@ -350,17 +376,238 @@ function Songs({ setErr, q }) {
   );
 }
 
+// ---------- Reports & analytics ----------
+const DAYS = 14;
+const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
+const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
+
+// Horizontal bars drawn with plain CSS (no chart library).
+function Bars({ rows, empty = 'Nothing to show yet.' }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  if (!rows.length) return <p className="ad-dim">{empty}</p>;
+  return (
+    <ul className="ad-bars">
+      {rows.map((r) => (
+        <li key={r.label}>
+          <span className="ad-bar-label" title={r.label}>{r.label}</span>
+          <span className="ad-bar-track"><span className={`ad-bar-fill ${r.tone || ''}`} style={{ width: `${Math.max(3, (r.value / max) * 100)}%` }} /></span>
+          <b className="ad-bar-val">{r.value}</b>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Column chart for a daily series.
+function Columns({ days }) {
+  const max = Math.max(1, ...days.map((d) => d.value));
+  return (
+    <div className="ad-cols" role="img" aria-label="Access codes created per day">
+      {days.map((d) => (
+        <div key={d.key} className="ad-col" title={`${d.label}: ${d.value}`}>
+          <b>{d.value || ''}</b>
+          <span className="ad-col-bar" style={{ height: `${d.value ? Math.max(6, (d.value / max) * 100) : 2}%` }} />
+          <small>{d.short}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Reports({ data, setErr }) {
+  const [rep, setRep] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => admin.loadReports().then((r) => alive && setRep(r)).catch((e) => setErr(e.message || String(e)));
+    load();
+    const t = setInterval(load, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [setErr]);
+
+  if (!rep || !data) return <p className="ad-dim">Loading the numbers…</p>;
+
+  const now = Date.now();
+  const { codes, songs } = rep;
+  const used = codes.filter((c) => c.uses > 0);
+  const sessions = codes.reduce((n, c) => n + (c.uses || 0), 0);
+  const secs = codeSeconds; // null = unlimited
+  const timedSessions = codes.reduce((n, c) => n + (secs(c) == null ? 0 : (c.uses || 0)), 0);
+  const unlimitedSessions = sessions - timedSessions;
+  const hosted = codes.reduce((n, c) => n + (secs(c) == null ? 0 : (c.uses || 0) * secs(c)), 0);
+  const avgLen = timedSessions ? hosted / timedSessions : 0;
+  const revoked = codes.filter((c) => c.revoked).length;
+  const lapsed = codes.filter((c) => !c.revoked && c.redeem_by && new Date(c.redeem_by) < now && c.uses < c.max_uses).length;
+  const ready = codes.filter((c) => !c.revoked && !(c.redeem_by && new Date(c.redeem_by) < now) && c.uses < c.max_uses).length;
+
+  // codes created per day, last 14 days
+  const perDay = countDays(codes);
+  function countDays(list) {
+    const m = {};
+    list.forEach((c) => { const k = dayKey(c.created_at); m[k] = (m[k] || 0) + 1; });
+    return Array.from({ length: DAYS }, (_, i) => {
+      const d = new Date(now - (DAYS - 1 - i) * 86400000);
+      return { key: dayKey(d), value: m[dayKey(d)] || 0, label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), short: String(d.getDate()) };
+    });
+  }
+  const last14 = perDay.reduce((n, d) => n + d.value, 0);
+
+  // live: users per host + queue state
+  const live = (p) => now - new Date(p.last_seen).getTime() < ACTIVE_MS;
+  const perHost = data.rooms.map((r) => ({ label: r.name || r.code, value: data.people.filter((p) => p.room_code === r.code).length }))
+    .sort((a, b) => b.value - a.value).slice(0, 6);
+  const playing = data.queue.filter((q) => q.status === 'playing').length;
+  const waiting = data.queue.filter((q) => q.status === 'queued').length;
+  const activeUsers = data.people.filter(live).length;
+
+  const langs = Object.entries(songs.byLanguage).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  const sources = Object.entries(songs.bySource).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value, tone: 'pink' }));
+
+  const exportCsv = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const head = ['code', 'label', 'length_seconds', 'uses', 'max_uses', 'revoked', 'redeem_by', 'created_at', 'last_used_at'];
+    const lines = [head.join(',')].concat(codes.map((c) => [c.code, c.label, secs(c) == null ? 'unlimited' : secs(c), c.uses, c.max_uses, c.revoked, c.redeem_by, c.created_at, c.last_used_at].map(esc).join(',')));
+    const url = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `tagayoke-access-codes-${dayKey(now)}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  return (
+    <div className="ad-reports">
+      <div className="ad-kpis">
+        <div className="ad-kpi"><b>{sessions}</b><span>Sessions started</span></div>
+        <div className="ad-kpi"><b>{pct(used.length, codes.length)}%</b><span>Codes redeemed ({used.length}/{codes.length})</span></div>
+        <div className="ad-kpi"><b>{formatDuration(hosted)}</b><span>Timed hosting granted{unlimitedSessions ? ` (+${unlimitedSessions} unlimited)` : ''}</span></div>
+        <div className="ad-kpi"><b>{formatDuration(avgLen)}</b><span>Average timed session</span></div>
+      </div>
+
+      <section className="ad-rcard">
+        <div className="ad-rhead"><h3>Access codes created</h3><span className="ad-dim">Last {DAYS} days · {last14} total</span></div>
+        <Columns days={perDay} />
+      </section>
+
+      <div className="ad-rgrid">
+        <section className="ad-rcard">
+          <div className="ad-rhead"><h3>Access code status</h3></div>
+          <Bars rows={[
+            { label: 'Ready to use', value: ready },
+            { label: 'Used up', value: codes.filter((c) => !c.revoked && c.uses >= c.max_uses).length },
+            { label: 'Lapsed (not used in time)', value: lapsed, tone: 'pink' },
+            { label: 'Revoked', value: revoked, tone: 'pink' },
+          ]} empty="No access codes yet." />
+        </section>
+
+        <section className="ad-rcard">
+          <div className="ad-rhead"><h3>Right now</h3><span className="ad-dim">Live</span></div>
+          <div className="ad-mini2">
+            <div><b>{data.rooms.length}</b><span>Hosts</span></div>
+            <div><b>{activeUsers}<small>/{data.people.length}</small></b><span>Active users</span></div>
+            <div><b>{playing}</b><span>Singing</span></div>
+            <div><b>{waiting}</b><span>Waiting in queue</span></div>
+          </div>
+        </section>
+
+        <section className="ad-rcard">
+          <div className="ad-rhead"><h3>Users per host</h3><span className="ad-dim">Top 6 live</span></div>
+          <Bars rows={perHost} empty="No hosts running." />
+        </section>
+
+        <section className="ad-rcard">
+          <div className="ad-rhead"><h3>Song catalog</h3><span className="ad-dim">{songs.total} songs · {pct(songs.withVideo, songs.total)}% have a video</span></div>
+          <Bars rows={langs} empty="No songs." />
+          <h4 className="ad-rsub">Where songs came from</h4>
+          <Bars rows={sources} empty="No songs." />
+        </section>
+      </div>
+
+      <div className="ad-row ad-rfoot">
+        <button className="ad-btn ghost small" onClick={exportCsv} disabled={!codes.length}><Icon name="download" size={16} />Export access codes (CSV)</button>
+        <span className="ad-dim">Hosts and their queues are removed when a session ends, so live figures only show what is running now. Session history comes from access codes.</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Settings management ----------
+function Settings({ setErr }) {
+  const [saved, setSaved] = useState(null);       // what is stored (and shown on the landing page when visible)
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    getAnnouncement().then((a) => { setSaved(a); setTitle(a.title); setMessage(a.message); }).catch((e) => setErr(e.message || String(e)));
+  }, [setErr]);
+
+  const flash = (t) => { setNote(t); setTimeout(() => setNote(''), 2500); };
+  const write = async (next, done) => {
+    setErr(''); setBusy(true);
+    try { setSaved(await saveAnnouncement(next)); flash(done); } catch (e) { setErr(e.message || String(e)); } finally { setBusy(false); }
+  };
+
+  if (!saved) return <p className="ad-dim">Loading settings…</p>;
+  const dirty = title.trim() !== (saved.title || '') || message.trim() !== saved.message;
+  const visible = saved.visible;
+  const toggle = () => {
+    if (!visible && !saved.message.trim()) return setErr('Write and save a message first, then make it visible.');
+    return write({ ...saved, visible: !visible }, visible ? 'Hidden from the landing page.' : 'Now visible on the landing page.');
+  };
+
+  return (
+    <div className="ad-settings">
+      <section className="ad-rcard">
+        <div className="ad-rhead">
+          <h3><Icon name="megaphone" size={18} /> Announcement</h3>
+          <span className={`ad-status ${visible ? 'ok' : 'dim'}`}>{visible ? 'Visible' : 'Hidden'}</span>
+        </div>
+        <p className="ad-dim ad-lead">Shown on the landing page as a dropdown. Guests tap it to read the message.</p>
+
+        <form className="ad-form" onSubmit={(e) => { e.preventDefault(); write({ title, message, visible }, 'Saved.'); }}>
+          <label>Heading
+            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} placeholder="Announcement!" />
+          </label>
+          <label>Message
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={5} placeholder="e.g. We are closed on Dec 25. Happy holidays!" />
+            <small className="ad-dim ad-count">{message.length}/500</small>
+          </label>
+          <div className="ad-row">
+            <button className="ad-btn" disabled={busy || !dirty || !message.trim()}>Save message</button>
+            <button type="button" className={`ad-btn ${visible ? 'danger' : 'dark'}`} onClick={toggle} disabled={busy} aria-pressed={visible}>
+              {visible ? 'Hide announcement' : 'Make visible'}
+            </button>
+            {dirty && <span className="ad-warn">Unsaved changes</span>}
+            {note && <span className="ad-dim" role="status">{note}</span>}
+          </div>
+        </form>
+
+        <h4 className="ad-rsub">Preview</h4>
+        <div className={`ad-preview ${visible ? '' : 'off'}`}>
+          {message.trim()
+            ? <AnnouncementView key={`${title}|${message}`} title={title.trim() || 'Announcement!'} message={message.trim()} defaultOpen />
+            : <p className="ad-dim">Nothing to preview yet.</p>}
+          {!visible && message.trim() && <p className="ad-dim ad-prev-note">Hidden: guests do not see this yet.</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 const NAV = [
   ['hosts', 'Hosts and users', 'grid'],
   ['codes', 'Access codes', 'key'],
   ['songs', 'Songs', 'music'],
+  ['reports', 'Reports & analytics', 'chart'],
+  ['settings', 'Settings', 'gear'],
 ];
 const PANEL = {
   hosts: ['Live hosts', 'Rooms running right now'],
   codes: ['Access codes', 'Codes that let someone start hosting'],
   songs: ['Song catalog', 'Add, edit and remove songs'],
+  reports: ['Reports & analytics', 'How the app is being used'],
+  settings: ['Settings', 'Announcement and app-wide options'],
 };
-const SEARCH_HINT = { hosts: 'Search hosts by code or name', codes: 'Search codes or labels', songs: 'Search number, title or artist' };
+const SEARCH_HINT = { hosts: 'Search hosts by code or name', codes: 'Search codes or labels', songs: 'Search number, title or artist', reports: 'Search is not used here', settings: 'Search is not used here' };
 
 function Dashboard({ onSignOut }) {
   const nav = useNavigate();
@@ -400,7 +647,7 @@ function Dashboard({ onSignOut }) {
         <header className="ad-topbar">
           <label className="ad-search">
             <Icon name="search" size={18} />
-            <input type="search" placeholder={SEARCH_HINT[tab]} value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search" />
+            <input type="search" placeholder={SEARCH_HINT[tab]} value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search" disabled={tab === 'reports' || tab === 'settings'} />
           </label>
           <div className="ad-top-right">
             {admin.DEMO && <span className="ad-badge">Demo mode</span>}
@@ -429,8 +676,10 @@ function Dashboard({ onSignOut }) {
               <section className="ad-card-panel">
                 <div className="ad-panel-head"><h2>{title}</h2><span className="ad-dim">{sub}</span></div>
                 {!data && tab === 'hosts' && <p className="ad-dim">Loading…</p>}
-                {data && tab === 'hosts' && <Hosts data={data} act={act} filter={search} />}
+                {data && tab === 'hosts' && <Hosts data={data} act={act} filter={search} setErr={setErr} />}
                 {tab === 'codes' && <Codes setErr={setErr} filter={search} />}
+                {tab === 'reports' && <Reports data={data} setErr={setErr} />}
+                {tab === 'settings' && <Settings setErr={setErr} />}
                 {tab === 'songs' && (admin.DEMO ? <p className="ad-dim">Songs are managed in Supabase. Connect it to edit the catalog here.</p> : <Songs setErr={setErr} q={search} />)}
               </section>
             </div>

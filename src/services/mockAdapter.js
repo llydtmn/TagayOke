@@ -43,6 +43,9 @@ export async function searchOnline() {
 const CODES = 'tagayoke:mock-codes';
 const loadCodes = () => JSON.parse(localStorage.getItem(CODES) || '[]');
 const saveCodes = (all) => localStorage.setItem(CODES, JSON.stringify(all));
+// Session length in seconds, or null for an unlimited code.
+const lenOf = (c) => c.duration_seconds ?? (c.duration_minutes != null ? c.duration_minutes * 60 : null);
+const endOf = (c) => { const n = lenOf(c); return n == null ? null : new Date(Date.now() + n * 1000).toISOString(); };
 const GRACE_MS = 10 * 60 * 1000; // an expired room stays for a while so the host can press "Continue"
 const expired = (r) => r && r.expires_at && new Date(r.expires_at).getTime() + GRACE_MS <= Date.now();
 // Drops rooms whose time is up (the live backend does this with a scheduled job).
@@ -62,8 +65,8 @@ export async function redeemHostCode(input) {
   if (c.uses >= c.max_uses) throw new Error('That access code has already been used.');
   const db = sweep();
   let code; do { code = makeRoomCode(); } while (db[code]);
-  const expiresAt = new Date(Date.now() + (c.duration_seconds ?? c.duration_minutes * 60) * 1000).toISOString();
-  db[code] = { queue: [], created_at: new Date().toISOString(), expires_at: expiresAt };
+  const expiresAt = endOf(c);
+  db[code] = { queue: [], name: c.label || null, created_at: new Date().toISOString(), expires_at: expiresAt };
   save(db, code);
   c.uses += 1; c.last_used_at = new Date().toISOString(); saveCodes(all);
   return { code, expiresAt, serverOffset: 0 };
@@ -84,7 +87,7 @@ export async function extendRoom(code, input) {
   if (c.uses >= c.max_uses) throw new Error('That access code has already been used.');
   const db = load();
   if (!db[code]) throw new Error('This room has already closed.');
-  const expiresAt = new Date(Date.now() + (c.duration_seconds ?? c.duration_minutes * 60) * 1000).toISOString();
+  const expiresAt = endOf(c);
   db[code].expires_at = expiresAt;
   save(db, code);
   c.uses += 1; c.last_used_at = new Date().toISOString(); saveCodes(all);

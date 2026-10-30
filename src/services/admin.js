@@ -89,9 +89,10 @@ export async function listCodes() {
   if (DEMO) return loadCodes().sort((a, b) => b.created_at.localeCompare(a.created_at));
   return check(await supabase.from('host_codes').select('*').order('created_at', { ascending: false }));
 }
+// `seconds` null/0 = unlimited session (needs supabase/unlimited-host-codes.sql in live mode).
 export async function createCode({ label, seconds, maxUses, redeemByHours }) {
   const row = {
-    code: makeAccessCode(), label: label || null, duration_seconds: seconds, max_uses: maxUses || 1,
+    code: makeAccessCode(), label: label || null, duration_seconds: seconds || null, max_uses: maxUses || 1,
     redeem_by: redeemByHours ? new Date(Date.now() + redeemByHours * 3600000).toISOString() : null,
   };
   if (DEMO) { saveCodes([...loadCodes(), { ...row, id: uid(), uses: 0, revoked: false, created_at: new Date().toISOString(), last_used_at: null }]); return row.code; }
@@ -141,4 +142,38 @@ export async function deleteSong(id) {
   const { error } = await supabase.from('songs').delete().eq('id', id);
   if (error?.code === '23503') throw new Error('That song is in a queue right now. Try again after it has played.');
   if (error) throw error;
+}
+
+// ---- reports & analytics ----
+// Access codes live on after a session ends, so they give the history. Rooms/users/queue are "right now" (loadOverview).
+export async function loadReports() {
+  const countBy = (list, key) => list.reduce((m, x) => { const k = key(x) || 'Other'; m[k] = (m[k] || 0) + 1; return m; }, {});
+  if (DEMO) {
+    let custom = [];
+    try { custom = JSON.parse(localStorage.getItem('tagayoke:custom-songs') || '[]'); } catch { /* ignore */ }
+    const songs = [...SEED_SONGS, ...custom];
+    return {
+      codes: loadCodes(),
+      songs: {
+        total: songs.length,
+        withVideo: songs.filter((s) => s.youtubeId).length,
+        byLanguage: countBy(songs, (s) => s.language),
+        bySource: countBy(songs, (s) => (custom.includes(s) ? 'user' : 'built-in')),
+      },
+    };
+  }
+  const [codes, songs] = await Promise.all([
+    supabase.from('host_codes').select('*').order('created_at', { ascending: false }).limit(5000),
+    supabase.from('songs').select('language, youtube_id, source').limit(20000),
+  ]);
+  const rows = check(songs);
+  return {
+    codes: check(codes),
+    songs: {
+      total: rows.length,
+      withVideo: rows.filter((s) => s.youtube_id).length,
+      byLanguage: countBy(rows, (s) => s.language),
+      bySource: countBy(rows, (s) => s.source),
+    },
+  };
 }
