@@ -21,7 +21,7 @@ function pickMode(t, total) {
 }
 
 const WARN_MS = 10 * 60 * 1000;   // timer turns pink
-const REMIND_MS = 10 * 1000;      // pop-up reminder fires when this much time is left
+const REMIND_MS = 60 * 1000;      // pop-up reminder fires when this much time is left
 const REMIND_SHOW_MS = 10 * 1000; // how long the pop-up stays on screen
 
 const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
@@ -53,6 +53,28 @@ function TimeReminder({ left }) {
       <div>
         <p className="time-reminder-title">1 minute left!</p>
         <p className="time-reminder-sub">The session ends soon. Finish up your song.</p>
+      </div>
+    </div>
+  );
+}
+
+// Shown when the clock hits zero and the access code still has uses left. Lives inside the stage box so it works in full screen.
+function TimeUpPanel({ timeUp }) {
+  const { remaining, onContinue, onEnd, busy, error } = timeUp;
+  return (
+    <div className="timeup" role="alertdialog" aria-live="assertive">
+      <div className="timeup-card">
+        <p className="timeup-icon" aria-hidden="true">⏰</p>
+        <h2 className="timeup-title">Time's up!</h2>
+        <p className="timeup-text">
+          This access code can be used {remaining} more {remaining === 1 ? 'time' : 'times'}. Continue to keep going in this room with a fresh session.
+        </p>
+        <div className="timeup-btns">
+          <button className="primary big" onClick={onContinue} disabled={busy}>{busy ? 'Starting…' : 'Continue session'}</button>
+          <button className="ghost" onClick={onEnd} disabled={busy}>End session</button>
+        </div>
+        <p className="timeup-note">Your reserved songs stay, and the current song carries on where it stopped.</p>
+        {error && <p className="error">{error}</p>}
       </div>
     </div>
   );
@@ -114,13 +136,13 @@ function ReservedBar({ item, upNext, mode, left }) {
   );
 }
 
-export default function Stage({ item, roomCode, onEnded, upNext = [], left = null }) {
+export default function Stage({ item, roomCode, onEnded, upNext = [], left = null, timeUp = null, startAt = 0, onPosition }) {
   const screen = useRef(null);
-  const [isFs, setIsFs] = useState(false);
+  const [isFs, setIsFs] = useState(() => !!fsElement()); // may already be in full screen when this screen opens
   const [mode, setMode] = useState('queue'); // 'queue' | 'current' | 'next'
 
   useEffect(() => {
-    const sync = () => setIsFs(!!screen.current && fsElement() === screen.current);
+    const sync = () => setIsFs(!!fsElement());
     document.addEventListener('fullscreenchange', sync);
     document.addEventListener('webkitfullscreenchange', sync);
     return () => {
@@ -133,14 +155,16 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
   useEffect(() => { setMode('queue'); }, [item?.id]);
 
   // Called about 4 times a second by the player; setMode does nothing when the mode hasn't changed.
-  const onProgress = useCallback((t, total) => setMode(pickMode(t, total)), []);
+  const posCb = useRef(onPosition);
+  posCb.current = onPosition;
+  const onProgress = useCallback((t, total) => { setMode(pickMode(t, total)); posCb.current?.(t); }, []);
 
   // Fullscreen the whole screen box (video + top bar), not just the YouTube iframe,
   // otherwise our bar would be hidden behind the player's own fullscreen.
   const toggleFullscreen = useCallback(() => {
     const el = screen.current;
     if (!el) return;
-    if (fsElement()) {
+    if (fsElement() === el) {
       (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
     } else {
       (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
@@ -151,7 +175,13 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
     return (
       <div className="stage idle">
         <IdleTV roomCode={roomCode} />
+        {isFs && left != null && (
+          <div className={`idle-timer ${left <= WARN_MS ? 'warn' : ''}`} role="timer" aria-live="off">
+            <span>Session ends in</span> <b>{formatLeft(left)}</b>
+          </div>
+        )}
         <TimeReminder left={left} />
+        {timeUp && <TimeUpPanel timeUp={timeUp} />}
       </div>
     );
   }
@@ -159,11 +189,12 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
   return (
     <div className="stage">
       <div className="stage-screen" ref={screen}>
-        {song.youtubeId
-          ? <YouTubePlayer key={item.id} videoId={song.youtubeId} onEnded={onEnded} onProgress={onProgress} />
-          : <DemoStage key={item.id} song={song} onEnded={onEnded} onProgress={onProgress} />}
+        {timeUp ? null : song.youtubeId
+          ? <YouTubePlayer key={item.id} videoId={song.youtubeId} onEnded={onEnded} onProgress={onProgress} startAt={startAt} />
+          : <DemoStage key={item.id} song={song} onEnded={onEnded} onProgress={onProgress} startAt={startAt} />}
         {isFs && <ReservedBar item={item} upNext={upNext} mode={mode} left={left} />}
         <TimeReminder left={left} />
+        {timeUp && <TimeUpPanel timeUp={timeUp} />}
       </div>
       <div className="now">
         <span className="chip">#{song.code}</span>

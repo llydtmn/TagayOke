@@ -26,8 +26,9 @@ export function useSessionClock(code, onExpire) {
   const left = synced.current && expiresAt != null ? expiresAt - (Date.now() + offset.current) : null;
 
   useEffect(() => {
+    if (left != null && left > 0) fired.current = false;
     if (left != null && left <= 0 && !fired.current) { fired.current = true; onExpire(); }
   }, [left, onExpire]);
 
-  return { left, expiresAt };
+  return { left, expiresAt, resync: sync };
 }

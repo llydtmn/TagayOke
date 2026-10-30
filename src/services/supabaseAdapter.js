@@ -37,6 +37,19 @@ export async function redeemHostCode(input) {
   const row = Array.isArray(data) ? data[0] : data;
   return { code: row.out_room, expiresAt: row.out_expires, serverOffset: new Date(row.out_now).getTime() - Date.now() + (Date.now() - t0) / 2 };
 }
+// How many more times this access code can start a session (needs supabase/host-code-remaining.sql).
+export async function hostCodeRemaining(input) {
+  const { data, error } = await supabase.rpc('host_code_remaining', { p_code: normalizeAccessCode(input) });
+  if (error) throw new Error(error.message);
+  return Number(data) || 0;
+}
+// Continue in the SAME room: the server checks the access code, uses it once more and resets the room's end time
+// (needs supabase/continue-room.sql).
+export async function extendRoom(code, input) {
+  const { data, error } = await supabase.rpc('continue_room', { p_room: code, p_code: normalizeAccessCode(input) });
+  if (error) throw new Error(error.message);
+  return { expiresAt: data };
+}
 // Does the room still exist, when does it end, and how far is this device's clock from the server's?
 export async function roomStatus(code) {
   const t0 = Date.now();

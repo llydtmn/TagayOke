@@ -23,3 +23,6 @@ export const formatLeft = (ms) => {
   const pad = (n) => String(n).padStart(2, '0');
   return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`;
 };
+
+// Where the host screen remembers which access code started a room (this tab only), so it can offer "continue" when time is up.
+export const accessKey = (room) => `tagayoke:access:${room}`;

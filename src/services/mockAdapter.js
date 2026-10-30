@@ -43,7 +43,8 @@ export async function searchOnline() {
 const CODES = 'tagayoke:mock-codes';
 const loadCodes = () => JSON.parse(localStorage.getItem(CODES) || '[]');
 const saveCodes = (all) => localStorage.setItem(CODES, JSON.stringify(all));
-const expired = (r) => r && r.expires_at && new Date(r.expires_at).getTime() <= Date.now();
+const GRACE_MS = 10 * 60 * 1000; // an expired room stays for a while so the host can press "Continue"
+const expired = (r) => r && r.expires_at && new Date(r.expires_at).getTime() + GRACE_MS <= Date.now();
 // Drops rooms whose time is up (the live backend does this with a scheduled job).
 const sweep = () => {
   const db = load(); const gone = [];
@@ -66,6 +67,28 @@ export async function redeemHostCode(input) {
   save(db, code);
   c.uses += 1; c.last_used_at = new Date().toISOString(); saveCodes(all);
   return { code, expiresAt, serverOffset: 0 };
+}
+// How many more times this access code can start a session (0 when unknown, revoked or out of date).
+export async function hostCodeRemaining(input) {
+  const c = loadCodes().find((x) => x.code === normalizeAccessCode(input));
+  if (!c || c.revoked) return 0;
+  if (c.redeem_by && new Date(c.redeem_by).getTime() < Date.now()) return 0;
+  return Math.max(c.max_uses - c.uses, 0);
+}
+// Continue in the SAME room: uses the access code once more and gives the room a fresh full session.
+export async function extendRoom(code, input) {
+  const all = loadCodes();
+  const c = all.find((x) => x.code === normalizeAccessCode(input));
+  if (!c || c.revoked) throw new Error('That access code is not valid.');
+  if (c.redeem_by && new Date(c.redeem_by).getTime() < Date.now()) throw new Error('That access code has expired.');
+  if (c.uses >= c.max_uses) throw new Error('That access code has already been used.');
+  const db = load();
+  if (!db[code]) throw new Error('This room has already closed.');
+  const expiresAt = new Date(Date.now() + (c.duration_seconds ?? c.duration_minutes * 60) * 1000).toISOString();
+  db[code].expires_at = expiresAt;
+  save(db, code);
+  c.uses += 1; c.last_used_at = new Date().toISOString(); saveCodes(all);
+  return { expiresAt };
 }
 export async function roomStatus(code) {
   const r = sweep()[code];

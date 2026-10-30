@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services';
 import { APP_NAME, TAGLINE, USE_MOCK } from '../config/env';
-import { normalizeAccessCode } from '../utils/hostCode';
+import { normalizeAccessCode, accessKey } from '../utils/hostCode';
+import { enterPageFullscreen, exitPageFullscreen } from '../utils/fullscreen';
 
 export default function Landing() {
   const nav = useNavigate();
@@ -15,12 +16,17 @@ export default function Landing() {
   const [access, setAccess] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Back on the start page (session ended or time up): leave full screen.
+  useEffect(() => { exitPageFullscreen(); }, []);
+
   const host = async (e) => {
     e.preventDefault(); setErr(''); setBusy(true);
+    enterPageFullscreen(); // must happen right now, inside the tap, so the host screen opens already in full screen
     try {
       const { code: room } = await api.redeemHostCode(access);
+      try { sessionStorage.setItem(accessKey(room), normalizeAccessCode(access)); } catch { /* private mode: no "continue" offer */ }
       nav(`/host/${room}`);
-    } catch (x) { setErr(x.message || 'Could not start hosting.'); }
+    } catch (x) { exitPageFullscreen(); setErr(x.message || 'Could not start hosting.'); }
     finally { setBusy(false); }
   };
   const join = async (e) => {
