@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 // Stands in for the player when a song has no youtubeId (demo catalog).
-export default function DemoStage({ song, onEnded, seconds = 15 }) {
+export default function DemoStage({ song, onEnded, onProgress, seconds = 15 }) {
   const [t, setT] = useState(0);
   const done = useRef(false);
   useEffect(() => {
     const id = setInterval(() => setT((x) => x + 0.25), 250);
     return () => clearInterval(id);
   }, []);
+  useEffect(() => { onProgress?.(t, seconds); }, [t]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (t >= seconds && !done.current) { done.current = true; onEnded(); }
   }, [t, seconds, onEnded]);

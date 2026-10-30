@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { makeRoomCode } from '../utils/roomCode';
+import { normalizeAccessCode } from '../utils/hostCode';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, MAX_QUEUE } from '../config/env';
 
 export const mode = 'live';
@@ -29,17 +29,24 @@ export async function searchOnline(q) {
   const data = check(await supabase.functions.invoke('yt-search', { body: { q } }));
   return (data.songs || []).map(toSong);
 }
-export async function createRoom() {
-  for (let i = 0; i < 3; i++) {
-    const code = makeRoomCode();
-    const { error } = await supabase.from('rooms').insert({ code });
-    if (!error) return code;
-  }
-  throw new Error('Could not create a room. Try again.');
+// Turns an admin-issued access code into a room. The server checks the code, creates the room and starts the clock.
+export async function redeemHostCode(input) {
+  const t0 = Date.now();
+  const { data, error } = await supabase.rpc('redeem_host_code', { p_code: normalizeAccessCode(input) });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  return { code: row.out_room, expiresAt: row.out_expires, serverOffset: new Date(row.out_now).getTime() - Date.now() + (Date.now() - t0) / 2 };
+}
+// Does the room still exist, when does it end, and how far is this device's clock from the server's?
+export async function roomStatus(code) {
+  const t0 = Date.now();
+  const { data, error } = await supabase.rpc('room_status', { p_code: code });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  return { exists: !!row?.out_exists, expiresAt: row?.out_expires || null, serverOffset: new Date(row.out_now).getTime() - Date.now() + (Date.now() - t0) / 2 };
 }
 export async function roomExists(code) {
-  const { data } = await supabase.from('rooms').select('code').eq('code', code).maybeSingle();
-  return !!data;
+  try { return (await roomStatus(code)).exists; } catch { return false; }
 }
 // Host ends the session: deletes the room (and its queue) from Supabase.
 export async function closeRoom(code) {

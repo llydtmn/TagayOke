@@ -2,14 +2,27 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services';
 import { APP_NAME, TAGLINE, USE_MOCK } from '../config/env';
+import { normalizeAccessCode } from '../utils/hostCode';
 
 export default function Landing() {
   const nav = useNavigate();
   const [code, setCode] = useState('');
   const { state } = useLocation();
-  const [err, setErr] = useState(state?.closed ? 'The host ended the session.' : '');
+  const [err, setErr] = useState(
+    state?.expired ? 'Your hosting time is up and the session has ended. Ask for a new access code to host again.'
+      : state?.closed ? 'The host ended the session.' : '');
+  const [asking, setAsking] = useState(false);   // true once "Host on this screen" was pressed
+  const [access, setAccess] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const host = async () => { try { nav(`/host/${await api.createRoom()}`); } catch (e) { setErr(e.message); } };
+  const host = async (e) => {
+    e.preventDefault(); setErr(''); setBusy(true);
+    try {
+      const { code: room } = await api.redeemHostCode(access);
+      nav(`/host/${room}`);
+    } catch (x) { setErr(x.message || 'Could not start hosting.'); }
+    finally { setBusy(false); }
+  };
   const join = async (e) => {
     e.preventDefault();
     const c = code.trim().toUpperCase();
@@ -22,7 +35,20 @@ export default function Landing() {
       <p className="tagline">{TAGLINE}</p>
       <p className="lede">Reserve songs from your phone while someone else is mid-chorus. Numbered songs, a song book and a queue, like the real machine.</p>
       <div className="actions">
-        <button className="primary big" onClick={host}>Host on this screen</button>
+        {!asking ? (
+          <button className="primary big" onClick={() => { setErr(''); setAsking(true); }}>Host on this screen</button>
+        ) : (
+          <form onSubmit={host} className="host-code">
+            <label className="field"><span>Enter your host access code</span>
+              <input value={access} onChange={(e) => setAccess(normalizeAccessCode(e.target.value))} maxLength={9}
+                placeholder="XXXX-XXXX" autoCapitalize="characters" autoComplete="off" spellCheck={false} autoFocus />
+            </label>
+            <div className="host-code-btns">
+              <button className="primary big" type="submit" disabled={busy || access.length < 9}>{busy ? 'Checking…' : 'Start hosting'}</button>
+              <button className="ghost" type="button" onClick={() => { setAsking(false); setAccess(''); setErr(''); }}>Cancel</button>
+            </div>
+          </form>
+        )}
         <form onSubmit={join} className="join">
           <label className="field"><span>Have a room code?</span>
             <input value={code} onChange={(e) => setCode(e.target.value)} maxLength={4} placeholder="ABCD" autoCapitalize="characters" />
@@ -31,7 +57,7 @@ export default function Landing() {
         </form>
       </div>
       {err && <p className="error" role="alert">{err}</p>}
-      {USE_MOCK && <p className="muted">Demo mode: open Host in one tab and Join in another tab of this browser.</p>}
+      {USE_MOCK && <p className="muted">Demo mode: create an access code in /admin first, then use it here. Open Host in one tab and Join in another tab of this browser.</p>}
       <p className="fine">Drink responsibly. Never drive after drinking.</p>
     </main>
   );

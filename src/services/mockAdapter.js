@@ -2,6 +2,7 @@
 import { SEED_SONGS } from '../data/seedSongs';
 import { makeRoomCode } from '../utils/roomCode';
 import { MAX_QUEUE } from '../config/env';
+import { normalizeAccessCode } from '../utils/hostCode';
 
 const KEY = 'tagayoke:mock';
 const bc = new BroadcastChannel('tagayoke');
@@ -38,11 +39,39 @@ export async function listSongs(q = '', offset = 0, limit = 100) {
 export async function searchOnline() {
   throw new Error('YouTube search needs the Supabase edge function. Connect Supabase to enable it.');
 }
-export async function createRoom() {
-  const db = load(); const code = makeRoomCode();
-  db[code] = { queue: [] }; save(db, code); return code;
+// ---- host access codes (demo mode keeps them in localStorage; the admin page writes them) ----
+const CODES = 'tagayoke:mock-codes';
+const loadCodes = () => JSON.parse(localStorage.getItem(CODES) || '[]');
+const saveCodes = (all) => localStorage.setItem(CODES, JSON.stringify(all));
+const expired = (r) => r && r.expires_at && new Date(r.expires_at).getTime() <= Date.now();
+// Drops rooms whose time is up (the live backend does this with a scheduled job).
+const sweep = () => {
+  const db = load(); const gone = [];
+  for (const c of Object.keys(db)) if (expired(db[c])) { delete db[c]; gone.push(c); }
+  if (gone.length) { localStorage.setItem(KEY, JSON.stringify(db)); gone.forEach((c) => bc.postMessage({ code: c })); }
+  return db;
+};
+
+export async function redeemHostCode(input) {
+  const wanted = normalizeAccessCode(input);
+  const all = loadCodes();
+  const c = all.find((x) => x.code === wanted);
+  if (!c || c.revoked) throw new Error('That access code is not valid.');
+  if (c.redeem_by && new Date(c.redeem_by).getTime() < Date.now()) throw new Error('That access code has expired.');
+  if (c.uses >= c.max_uses) throw new Error('That access code has already been used.');
+  const db = sweep();
+  let code; do { code = makeRoomCode(); } while (db[code]);
+  const expiresAt = new Date(Date.now() + (c.duration_seconds ?? c.duration_minutes * 60) * 1000).toISOString();
+  db[code] = { queue: [], created_at: new Date().toISOString(), expires_at: expiresAt };
+  save(db, code);
+  c.uses += 1; c.last_used_at = new Date().toISOString(); saveCodes(all);
+  return { code, expiresAt, serverOffset: 0 };
 }
-export async function roomExists(code) { return !!load()[code]; }
+export async function roomStatus(code) {
+  const r = sweep()[code];
+  return { exists: !!r, expiresAt: r?.expires_at || null, serverOffset: 0 };
+}
+export async function roomExists(code) { return !!sweep()[code]; }
 export async function closeRoom(code) {
   const db = load(); delete db[code]; save(db, code);
 }

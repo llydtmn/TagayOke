@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as admin from '../services/admin';
 import { parseYouTubeId } from '../utils/youtube';
+import { formatDuration, formatLeft } from '../utils/hostCode';
 import '../styles/admin.css';
 
 const ACTIVE_MS = 2 * 60 * 1000; // a phone counts as "active" if it checked in within the last 2 minutes
@@ -36,6 +37,17 @@ function Editable({ value, placeholder = '—', onSave }) {
     </form>
   );
 }
+
+// Live countdown for one host row. "No limit" for rooms without an end time.
+function TimeLeft({ expiresAt }) {
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
+  if (!expiresAt) return <span className="ad-dim">No limit</span>;
+  const left = new Date(expiresAt).getTime() - Date.now();
+  return <span className={left < 10 * 60 * 1000 ? 'ad-warn' : ''}>{left <= 0 ? 'Ending…' : formatLeft(left)}</span>;
+}
+
+const copy = async (text) => { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } };
 
 function Login({ onDone }) {
   const [email, setEmail] = useState('');
@@ -81,6 +93,7 @@ function Users({ code, users, live, act }) {
 
 function Hosts({ data, act }) {
   const [name, setName] = useState('');
+  const [minutes, setMinutes] = useState(0);
   const [open, setOpen] = useState(null);
   const now = Date.now();
   const usersOf = (c) => data.people.filter((p) => p.room_code === c);
@@ -88,16 +101,20 @@ function Hosts({ data, act }) {
   const live = (p) => now - new Date(p.last_seen).getTime() < ACTIVE_MS;
   return (
     <>
-      <form className="ad-row" onSubmit={(e) => { e.preventDefault(); act(admin.createRoom)(name.trim()); setName(''); }}>
+      <form className="ad-row" onSubmit={(e) => { e.preventDefault(); act(admin.createRoom)(name.trim(), Number(minutes)); setName(''); }}>
         <input placeholder="New host name (optional)" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} />
+        <select value={minutes} onChange={(e) => setMinutes(e.target.value)} aria-label="Time limit">
+          <option value={0}>No time limit</option><option value={60}>1 hour</option><option value={120}>2 hours</option>
+          <option value={180}>3 hours</option><option value={360}>6 hours</option>
+        </select>
         <button className="ad-btn">Create host</button>
       </form>
       {!data.rooms.length ? (
-        <p className="ad-dim">No hosts right now. One appears when someone opens "Host on this screen".</p>
+        <p className="ad-dim">No hosts right now. One appears when someone enters an access code on "Host on this screen".</p>
       ) : (
         <div className="ad-scroll">
           <table className="ad-table">
-            <thead><tr><th>Code</th><th>Name</th><th>Users</th><th>Queue</th><th>Created</th><th /></tr></thead>
+            <thead><tr><th>Code</th><th>Name</th><th>Users</th><th>Queue</th><th>Time left</th><th>Created</th><th /></tr></thead>
             <tbody>
               {data.rooms.map((r) => {
                 const users = usersOf(r.code);
@@ -108,13 +125,16 @@ function Hosts({ data, act }) {
                       <td><Editable value={r.name} placeholder="Unnamed" onSave={(v) => act(admin.renameRoom)(r.code, v)} /></td>
                       <td>{users.length} <span className="ad-dim">({users.filter(live).length} active)</span></td>
                       <td>{queuedOf(r.code)}</td>
+                      <td><TimeLeft expiresAt={r.expires_at} /></td>
                       <td>{ago(r.created_at)}</td>
                       <td className="ad-actions">
+                        <button className="ad-btn ghost small" title="Add 30 minutes" onClick={() => act(admin.extendRoom)(r.code, 30, r.expires_at)}>+30m</button>
+                        <button className="ad-btn ghost small" title="Add 1 hour" onClick={() => act(admin.extendRoom)(r.code, 60, r.expires_at)}>+1h</button>
                         <button className="ad-btn ghost small" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Hide users' : 'Users'}</button>
-                        <button className="ad-btn danger small" onClick={() => window.confirm(`Delete host ${r.code}? This ends the room and removes its queue and users.`) && act(admin.deleteRoom)(r.code)}>Delete</button>
+                        <button className="ad-btn danger small" onClick={() => window.confirm(`End host ${r.code} now? This closes the room and removes its queue and users.`) && act(admin.deleteRoom)(r.code)}>End now</button>
                       </td>
                     </tr>
-                    {open === r.code && <tr className="ad-sub"><td colSpan={6}><Users code={r.code} users={users} live={live} act={act} /></td></tr>}
+                    {open === r.code && <tr className="ad-sub"><td colSpan={7}><Users code={r.code} users={users} live={live} act={act} /></td></tr>}
                   </Fragment>
                 );
               })}
@@ -122,6 +142,93 @@ function Hosts({ data, act }) {
           </table>
         </div>
       )}
+    </>
+  );
+}
+
+const UNITS = [[1, 'Seconds'], [60, 'Minutes'], [3600, 'Hours']]; // [seconds in one unit, label]
+const MAX_SECONDS = 24 * 3600;
+const REDEEM_BY = [[0, 'Any time'], [1, 'Within 1 hour'], [24, 'Within 24 hours'], [168, 'Within 7 days']];
+
+function codeStatus(c) {
+  if (c.revoked) return ['Revoked', 'bad'];
+  if (c.redeem_by && new Date(c.redeem_by) < new Date()) return ['Expired', 'bad'];
+  if (c.uses >= c.max_uses) return ['Used up', 'dim'];
+  return ['Ready', 'ok'];
+}
+
+function Codes({ setErr }) {
+  const [rows, setRows] = useState([]);
+  const [label, setLabel] = useState('');
+  const [amount, setAmount] = useState('3');   // typed by the admin
+  const [unit, setUnit] = useState(3600);       // seconds per unit: 1 = seconds, 60 = minutes, 3600 = hours
+  const [maxUses, setMaxUses] = useState(1);
+  const [redeemBy, setRedeemBy] = useState(0);
+  const [fresh, setFresh] = useState('');   // the code just created, shown big so it can be copied
+  const [copied, setCopied] = useState('');
+  const load = useCallback(() => admin.listCodes().then(setRows).catch((e) => setErr(e.message || String(e))), [setErr]);
+  useEffect(() => { load(); }, [load]);
+  const run = async (fn) => { setErr(''); try { await fn(); await load(); } catch (e) { setErr(e.message || String(e)); } };
+  const flashCopy = async (code) => { if (await copy(code)) { setCopied(code); setTimeout(() => setCopied(''), 1500); } };
+
+  const create = (e) => {
+    e.preventDefault();
+    const seconds = Math.round(Number(amount) * Number(unit));
+    if (!(seconds >= 1 && seconds <= MAX_SECONDS)) { setErr('Session length must be between 1 second and 24 hours.'); return; }
+    return run(async () => {
+      const code = await admin.createCode({ label: label.trim(), seconds, maxUses: Number(maxUses), redeemByHours: Number(redeemBy) });
+      setFresh(code); setLabel('');
+    });
+  };
+
+  return (
+    <>
+      <form className="ad-form ad-songform" onSubmit={create}>
+        <strong>New host access code</strong>
+        <label>Label (who is it for?)<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Maria's birthday" maxLength={40} /></label>
+        <label>Session length
+          <span className="ad-duration">
+            <input type="number" min="1" step="any" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 30" required />
+            <select value={unit} onChange={(e) => setUnit(Number(e.target.value))} aria-label="Unit of time">{UNITS.map(([s, t]) => <option key={s} value={s}>{t}</option>)}</select>
+          </span>
+        </label>
+        <label>Times it can be used<input type="number" min={1} max={50} value={maxUses} onChange={(e) => setMaxUses(e.target.value)} /></label>
+        <label>Code must be used<select value={redeemBy} onChange={(e) => setRedeemBy(e.target.value)}>{REDEEM_BY.map(([h, t]) => <option key={h} value={h}>{t}</option>)}</select></label>
+        <div className="ad-row"><button className="ad-btn">Generate code</button></div>
+      </form>
+      {fresh && (
+        <div className="ad-fresh">
+          <span className="ad-dim">Give this code to the host. The clock starts when they enter it.</span>
+          <b className="ad-bigcode">{fresh}</b>
+          <button className="ad-btn small" onClick={() => flashCopy(fresh)}>{copied === fresh ? 'Copied' : 'Copy'}</button>
+        </div>
+      )}
+      <div className="ad-scroll">
+        <table className="ad-table">
+          <thead><tr><th>Code</th><th>Label</th><th>Length</th><th>Used</th><th>Status</th><th>Created</th><th /></tr></thead>
+          <tbody>
+            {rows.map((c) => {
+              const [st, tone] = codeStatus(c);
+              return (
+                <tr key={c.id}>
+                  <td><span className="ad-code">{c.code}</span></td>
+                  <td>{c.label || <span className="ad-dim">—</span>}</td>
+                  <td>{formatDuration(c.duration_seconds ?? c.duration_minutes * 60)}</td>
+                  <td>{c.uses}/{c.max_uses}</td>
+                  <td><span className={`ad-status ${tone}`}>{st}</span></td>
+                  <td>{ago(c.created_at)}</td>
+                  <td className="ad-actions">
+                    <button className="ad-btn ghost small" onClick={() => flashCopy(c.code)}>{copied === c.code ? 'Copied' : 'Copy'}</button>
+                    <button className="ad-btn ghost small" onClick={() => run(() => admin.setCodeRevoked(c.id, !c.revoked))}>{c.revoked ? 'Restore' : 'Revoke'}</button>
+                    <button className="ad-btn danger small" onClick={() => window.confirm(`Delete code ${c.code}? Sessions already running keep going until their time is up.`) && run(() => admin.deleteCode(c.id))}>Delete</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {!rows.length && <p className="ad-dim">No access codes yet. Generate one above, then give it to whoever will host.</p>}
+      </div>
     </>
   );
 }
@@ -214,10 +321,12 @@ function Dashboard({ onSignOut }) {
       {cards && <section className="ad-cards">{cards.map(([label, n]) => <div className="ad-card" key={label}><b>{n}</b><span>{label}</span></div>)}</section>}
       <nav className="ad-tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'hosts'} onClick={() => setTab('hosts')}>Hosts and users</button>
+        <button role="tab" aria-selected={tab === 'codes'} onClick={() => setTab('codes')}>Access codes</button>
         <button role="tab" aria-selected={tab === 'songs'} onClick={() => setTab('songs')}>Songs</button>
       </nav>
       {!data && <p className="ad-dim">Loading…</p>}
       {data && tab === 'hosts' && <Hosts data={data} act={act} />}
+      {tab === 'codes' && <Codes setErr={setErr} />}
       {tab === 'songs' && (admin.DEMO ? <p className="ad-dim">Songs are managed in Supabase. Connect it to edit the catalog here.</p> : <Songs setErr={setErr} />)}
       <p className="ad-dim ad-foot">Updates every 5 seconds. A user is "active" if their phone checked in within the last 2 minutes.</p>
     </main>

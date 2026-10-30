@@ -12,6 +12,10 @@
 
 .ad input, .ad select { background: rgba(0, 0, 0, .28); border: 2px solid rgba(255, 255, 255, .2); border-radius: 10px; padding: .55rem .8rem; color: inherit; font: inherit; }
 .ad input:focus, .ad select:focus { outline: none; border-color: var(--yellow, #ffe14d); }
+/* Dropdown lists use a dark background so the options are readable. */
+.ad select { color-scheme: dark; }
+.ad select option { background: var(--blue-deep, #0a1650); color: var(--ink, #f6f3ff); }
+.ad-duration { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; }
 .ad-form { display: grid; gap: .7rem; margin-bottom: 1rem; }
 .ad-form label { display: grid; gap: .3rem; color: var(--muted, #aab4ec); font-size: .9rem; }
 .ad-songform { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); background: var(--panel, rgba(255, 255, 255, .07)); border-radius: 14px; padding: 1rem; }
@@ -48,3 +52,11 @@
 .ad-user { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap; }
 .ad-dot { width: .6rem; height: .6rem; border-radius: 50%; background: #6b76b8; flex: none; }
 .ad-dot.on { background: #3ddc84; }
+
+.ad-warn { color: var(--pink, #ff4fa3); font-weight: 700; }
+.ad-status { border-radius: 999px; padding: .1rem .6rem; font-size: .8rem; font-weight: 700; background: rgba(255, 255, 255, .12); }
+.ad-status.ok { background: #3ddc84; color: #04210f; }
+.ad-status.bad { background: var(--pink, #ff4fa3); color: #fff; }
+.ad-status.dim { color: var(--muted, #aab4ec); }
+.ad-fresh { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: var(--panel, rgba(255, 255, 255, .07)); border: 2px dashed var(--yellow, #ffe14d); border-radius: 14px; padding: .9rem 1rem; margin-bottom: 1rem; }
+.ad-bigcode { font-family: var(--display, system-ui); font-size: 1.8rem; letter-spacing: .12em; color: var(--yellow, #ffe14d); }

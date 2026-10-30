@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../services';
 import { useQueue } from '../hooks/useQueue';
+import { useSessionClock } from '../hooks/useSessionClock';
+import SessionTimer from '../components/SessionTimer';
 import { joinUrl } from '../utils/roomCode';
 import Stage from '../components/Stage';
 import QueueList from '../components/QueueList';
@@ -15,6 +17,13 @@ export default function Host() {
   const { nowPlaying, upNext, remove, advance, error } = useQueue(code);
 
   useEffect(() => { api.roomExists(code).then(setExists); }, [code]);
+
+  // Time's up: end the room for everyone (phones are sent home by the same "room closed" signal) and go back to the start.
+  const onExpire = useCallback(async () => {
+    try { await api.closeRoom(code); } catch { /* the server job may have removed it already */ }
+    nav('/', { replace: true, state: { expired: true } });
+  }, [code, nav]);
+  const { left } = useSessionClock(code, onExpire);
 
   // The room only ends when the host presses "End session". Refreshing the page keeps it alive.
   const endSession = async () => {
@@ -32,13 +41,14 @@ export default function Host() {
   return (
     <main className="host">
       <div className="host-main">
-        <Stage item={nowPlaying} roomCode={code} onEnded={advance} upNext={upNext} />
+        <Stage item={nowPlaying} roomCode={code} onEnded={advance} upNext={upNext} left={left} />
         {!started && (
           <div className="gate">
             <button className="primary big" onClick={() => setStarted(true)}>Start the session</button>
             <p className="muted">One tap lets the browser play sound automatically.</p>
           </div>
         )}
+        <SessionTimer left={left} />
         {started && nowPlaying && <button className="ghost" onClick={advance}>Skip this song</button>}
         <button className="ghost" onClick={endSession}>End session</button>
       </div>

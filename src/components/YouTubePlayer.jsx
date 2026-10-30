@@ -19,10 +19,13 @@ const loadYT = () => {
 };
 
 // Official IFrame Player only. Errors (removed or non-embeddable video) skip to the next song.
-export default function YouTubePlayer({ videoId, onEnded }) {
+// onProgress(currentSeconds, usableSeconds) is called about 4 times a second (drives the fullscreen top bar).
+export default function YouTubePlayer({ videoId, onEnded, onProgress }) {
   const host = useRef(null);
   const cb = useRef(onEnded);
   cb.current = onEnded;
+  const progressCb = useRef(onProgress);
+  progressCb.current = onProgress;
   const [shield, setShield] = useState(false);
 
   useEffect(() => {
@@ -41,6 +44,7 @@ export default function YouTubePlayer({ videoId, onEnded }) {
       const now = player.getCurrentTime();
       if (!total || !now || total < END_TRIM_SECONDS * 3) return; // skip live streams and very short clips
       const left = total - now;
+      progressCb.current?.(now, total - END_TRIM_SECONDS);
       setShield(left <= SHIELD_SECONDS);
       if (left <= END_TRIM_SECONDS) finish();
     };
@@ -49,6 +53,8 @@ export default function YouTubePlayer({ videoId, onEnded }) {
       if (dead) return;
       player = new YT.Player(host.current, {
         videoId, width: '100%', height: '100%',
+        // fs: 0 hides YouTube's own fullscreen button; it would fullscreen only the video and hide our top bar.
+        // Use the "Full screen" button under the video instead.
         playerVars: { autoplay: 1, rel: 0, playsinline: 1, fs: 0 },
         events: {
           onReady: () => { timer = setInterval(tick, 250); },

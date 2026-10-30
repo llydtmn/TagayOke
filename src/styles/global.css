@@ -1304,3 +1304,81 @@ input:focus {
   font-size: clamp(0.8rem, 1.3vw, 1.4rem);
   color: var(--muted);
 }
+
+/* ---- Top bar messages: "Current song" / "Next song" ---- */
+.reserved-msg {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(0.9rem, 1.6vw, 1.8rem);
+  white-space: nowrap;
+  animation: reserved-fade 0.4s ease;
+}
+.msg-label {
+  flex: none;
+  font-family: var(--display);
+  color: var(--yellow);
+}
+.msg-label.next { color: var(--pink); }
+.msg-title { overflow: hidden; text-overflow: ellipsis; }
+.msg-sub { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.reserved-list, .reserved-empty { animation: reserved-fade 0.4s ease; }
+@keyframes reserved-fade { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* ---- host access code + session timer ---- */
+.host-code { display: grid; gap: .8rem; justify-items: center; }
+.host-code input { text-align: center; font-family: var(--display); letter-spacing: .15em; font-size: 1.4rem; text-transform: uppercase; }
+.host-code-btns { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; justify-content: center; }
+.host-code-btns .primary:disabled { opacity: .5; cursor: not-allowed; }
+.session-timer { margin: 0; align-self: flex-start; background: var(--panel); border-radius: 999px; padding: .3rem .9rem; font-size: .95rem; }
+.session-timer b { font-family: var(--display); letter-spacing: .06em; color: var(--yellow); }
+.session-timer.warn { background: var(--pink); color: #fff; }
+.session-timer.warn b { color: #fff; }
+
+
+/* ---- Fullscreen: "Session ends in" at the top right of the bar ---- */
+.fs-timer {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.1em 0.8em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+.fs-timer-label { font-size: clamp(0.7rem, 1.2vw, 1.3rem); color: var(--muted); }
+.fs-timer-time { font-family: var(--display); font-size: clamp(0.9rem, 1.7vw, 1.8rem); letter-spacing: 0.06em; color: var(--yellow); }
+.fs-timer.warn { background: var(--pink); }
+.fs-timer.warn .fs-timer-label, .fs-timer.warn .fs-timer-time { color: #fff; }
+.fs-timer.urgent { animation: fs-timer-pulse 1s ease-in-out infinite; }
+@keyframes fs-timer-pulse { 50% { transform: scale(1.08); } }
+
+/* ---- 1-minute reminder pop-up (works inside the full-screen box) ---- */
+.time-reminder {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.6rem, 1.5vw, 1.5rem);
+  padding: clamp(0.8rem, 1.8vw, 2rem) clamp(1.2rem, 3vw, 3.5rem);
+  background: var(--pink);
+  color: #fff;
+  border: 3px solid var(--yellow);
+  border-radius: 1.2rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: reminder-in 0.4s ease, reminder-pulse 1.2s ease-in-out 0.4s infinite;
+}
+.time-reminder-icon { font-size: clamp(2rem, 4.5vw, 5rem); line-height: 1; }
+.time-reminder-title { margin: 0; font-family: var(--display); font-size: clamp(1.4rem, 3.2vw, 3.6rem); }
+.time-reminder-sub { margin: 0.2em 0 0; font-size: clamp(0.85rem, 1.5vw, 1.7rem); }
+@keyframes reminder-in { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes reminder-pulse { 50% { box-shadow: 0 10px 40px rgba(0,0,0,.6), 0 0 0 10px rgba(255,255,255,.18); } }
