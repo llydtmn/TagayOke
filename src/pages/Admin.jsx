@@ -16,6 +16,58 @@ const ago = (iso) => {
   return `${Math.floor(s / 86400)} d ago`;
 };
 
+// ---- small inline icons (no extra dependency) ----
+const ICONS = {
+  grid: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
+  key: <><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9M16 7l3 3M14 9l2 2" /></>,
+  music: <><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></>,
+  back: <path d="M15 18l-6-6 6-6" />,
+  out: <><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
+  users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.5a3.5 3.5 0 010 7M18 14.3c2.2.8 3.5 2.6 3.5 5.7" /></>,
+  list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  mic: <><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v4" /></>,
+  plus: <path d="M12 5v14M5 12h14" />,
+};
+function Icon({ name, size = 20 }) {
+  return (
+    <svg className="ad-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICONS[name]}
+    </svg>
+  );
+}
+
+// Karaoke illustration for the greeting banner.
+function HeroArt() {
+  return (
+    <svg className="ad-hero-art" viewBox="0 0 260 170" aria-hidden="true">
+      <g fill="#0a1650" opacity=".12">
+        <rect x="10" y="38" width="190" height="16" rx="8" />
+        <rect x="40" y="70" width="210" height="16" rx="8" />
+        <rect x="0" y="102" width="170" height="16" rx="8" />
+        <rect x="60" y="134" width="190" height="16" rx="8" />
+      </g>
+      <g transform="rotate(18 150 85)">
+        <rect x="122" y="14" width="56" height="72" rx="28" fill="#ff4fa3" />
+        <g stroke="#fff" strokeWidth="3" opacity=".6">
+          <path d="M126 36h48M126 50h48M126 64h48" />
+        </g>
+        <rect x="140" y="82" width="20" height="14" rx="3" fill="#0a1650" />
+        <rect x="143" y="96" width="14" height="66" rx="7" fill="#1b30a8" />
+      </g>
+      <g fill="#0a1650">
+        <path d="M60 128V82l30-8v46" fill="none" stroke="#0a1650" strokeWidth="6" strokeLinejoin="round" strokeLinecap="round" />
+        <ellipse cx="52" cy="130" rx="11" ry="8" />
+        <ellipse cx="82" cy="122" rx="11" ry="8" />
+      </g>
+      <circle cx="222" cy="28" r="6" fill="#ff4fa3" />
+      <circle cx="30" cy="22" r="4" fill="#fff" opacity=".8" />
+      <path d="M205 120l4 8 8 4-8 4-4 8-4-8-8-4 8-4z" fill="#fff" opacity=".9" />
+    </svg>
+  );
+}
+
 // Text with an Edit button that turns into a small inline form.
 function Editable({ value, placeholder = '—', onSave }) {
   const [edit, setEdit] = useState(false);
@@ -58,14 +110,17 @@ function Login({ onDone }) {
     try { await admin.signIn(email.trim(), password); onDone(); } catch (x) { setErr(x.message); }
   };
   return (
-    <main className="ad ad-narrow">
-      <h1>TagayOke Admin</h1>
-      <form onSubmit={submit} className="ad-form">
-        <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required /></label>
-        <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>
-        <button className="ad-btn">Sign in</button>
-        {err && <p className="ad-err" role="alert">{err}</p>}
-      </form>
+    <main className="ad-auth">
+      <div className="ad-auth-card">
+        <div className="ad-brand"><span className="ad-brand-mark"><Icon name="mic" size={22} /></span><span className="ad-brand-name">TagayOke</span></div>
+        <h1>Admin sign in</h1>
+        <form onSubmit={submit} className="ad-form">
+          <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required /></label>
+          <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>
+          <button className="ad-btn">Sign in</button>
+          {err && <p className="ad-err" role="alert">{err}</p>}
+        </form>
+      </div>
     </main>
   );
 }
@@ -91,7 +146,7 @@ function Users({ code, users, live, act }) {
   );
 }
 
-function Hosts({ data, act }) {
+function Hosts({ data, act, filter }) {
   const [name, setName] = useState('');
   const [minutes, setMinutes] = useState(0);
   const [open, setOpen] = useState(null);
@@ -99,6 +154,8 @@ function Hosts({ data, act }) {
   const usersOf = (c) => data.people.filter((p) => p.room_code === c);
   const queuedOf = (c) => data.queue.filter((q) => q.room_code === c).length;
   const live = (p) => now - new Date(p.last_seen).getTime() < ACTIVE_MS;
+  const f = filter.trim().toLowerCase();
+  const rooms = f ? data.rooms.filter((r) => `${r.code} ${r.name || ''}`.toLowerCase().includes(f)) : data.rooms;
   return (
     <>
       <form className="ad-row" onSubmit={(e) => { e.preventDefault(); act(admin.createRoom)(name.trim(), Number(minutes)); setName(''); }}>
@@ -111,36 +168,38 @@ function Hosts({ data, act }) {
       </form>
       {!data.rooms.length ? (
         <p className="ad-dim">No hosts right now. One appears when someone enters an access code on "Host on this screen".</p>
+      ) : !rooms.length ? (
+        <p className="ad-dim">No hosts match "{filter}".</p>
       ) : (
-        <div className="ad-scroll">
-          <table className="ad-table">
-            <thead><tr><th>Code</th><th>Name</th><th>Users</th><th>Queue</th><th>Time left</th><th>Created</th><th /></tr></thead>
-            <tbody>
-              {data.rooms.map((r) => {
-                const users = usersOf(r.code);
-                return (
-                  <Fragment key={r.code}>
-                    <tr>
-                      <td><span className="ad-code">{r.code}</span></td>
-                      <td><Editable value={r.name} placeholder="Unnamed" onSave={(v) => act(admin.renameRoom)(r.code, v)} /></td>
-                      <td>{users.length} <span className="ad-dim">({users.filter(live).length} active)</span></td>
-                      <td>{queuedOf(r.code)}</td>
-                      <td><TimeLeft expiresAt={r.expires_at} /></td>
-                      <td>{ago(r.created_at)}</td>
-                      <td className="ad-actions">
-                        <button className="ad-btn ghost small" title="Add 30 minutes" onClick={() => act(admin.extendRoom)(r.code, 30, r.expires_at)}>+30m</button>
-                        <button className="ad-btn ghost small" title="Add 1 hour" onClick={() => act(admin.extendRoom)(r.code, 60, r.expires_at)}>+1h</button>
-                        <button className="ad-btn ghost small" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Hide users' : 'Users'}</button>
-                        <button className="ad-btn danger small" onClick={() => window.confirm(`End host ${r.code} now? This closes the room and removes its queue and users.`) && act(admin.deleteRoom)(r.code)}>End now</button>
-                      </td>
-                    </tr>
-                    {open === r.code && <tr className="ad-sub"><td colSpan={7}><Users code={r.code} users={users} live={live} act={act} /></td></tr>}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ul className="ad-list">
+          {rooms.map((r, i) => {
+            const users = usersOf(r.code);
+            return (
+              <Fragment key={r.code}>
+                <li className="ad-item">
+                  <span className="ad-rank">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="ad-code">{r.code}</span>
+                  <div className="ad-item-main">
+                    <div className="ad-item-title"><Editable value={r.name} placeholder="Unnamed" onSave={(v) => act(admin.renameRoom)(r.code, v)} /></div>
+                    <div className="ad-dim">Created {ago(r.created_at)}</div>
+                  </div>
+                  <div className="ad-stats">
+                    <span title="Users"><Icon name="users" size={18} />{users.length} <small className="ad-dim">({users.filter(live).length} active)</small></span>
+                    <span title="Songs queued"><Icon name="list" size={18} />{queuedOf(r.code)}</span>
+                    <span title="Time left"><Icon name="clock" size={18} /><TimeLeft expiresAt={r.expires_at} /></span>
+                  </div>
+                  <div className="ad-actions">
+                    <button className="ad-btn ghost small" title="Add 30 minutes" onClick={() => act(admin.extendRoom)(r.code, 30, r.expires_at)}>+30m</button>
+                    <button className="ad-btn ghost small" title="Add 1 hour" onClick={() => act(admin.extendRoom)(r.code, 60, r.expires_at)}>+1h</button>
+                    <button className="ad-btn ghost small" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Hide users' : 'Users'}</button>
+                    <button className="ad-btn danger small" onClick={() => window.confirm(`End host ${r.code} now? This closes the room and removes its queue and users.`) && act(admin.deleteRoom)(r.code)}>End now</button>
+                  </div>
+                </li>
+                {open === r.code && <li className="ad-item-sub"><Users code={r.code} users={users} live={live} act={act} /></li>}
+              </Fragment>
+            );
+          })}
+        </ul>
       )}
     </>
   );
@@ -157,7 +216,7 @@ function codeStatus(c) {
   return ['Ready', 'ok'];
 }
 
-function Codes({ setErr }) {
+function Codes({ setErr, filter }) {
   const [rows, setRows] = useState([]);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('3');   // typed by the admin
@@ -170,6 +229,8 @@ function Codes({ setErr }) {
   useEffect(() => { load(); }, [load]);
   const run = async (fn) => { setErr(''); try { await fn(); await load(); } catch (e) { setErr(e.message || String(e)); } };
   const flashCopy = async (code) => { if (await copy(code)) { setCopied(code); setTimeout(() => setCopied(''), 1500); } };
+  const f = filter.trim().toLowerCase();
+  const shown = f ? rows.filter((c) => `${c.code} ${c.label || ''}`.toLowerCase().includes(f)) : rows;
 
   const create = (e) => {
     e.preventDefault();
@@ -183,7 +244,7 @@ function Codes({ setErr }) {
 
   return (
     <>
-      <form className="ad-form ad-songform" onSubmit={create}>
+      <form id="ad-new-code" className="ad-form ad-songform" onSubmit={create}>
         <strong>New host access code</strong>
         <label>Label (who is it for?)<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Maria's birthday" maxLength={40} /></label>
         <label>Session length
@@ -207,7 +268,7 @@ function Codes({ setErr }) {
         <table className="ad-table">
           <thead><tr><th>Code</th><th>Label</th><th>Length</th><th>Used</th><th>Status</th><th>Created</th><th /></tr></thead>
           <tbody>
-            {rows.map((c) => {
+            {shown.map((c) => {
               const [st, tone] = codeStatus(c);
               return (
                 <tr key={c.id}>
@@ -227,15 +288,14 @@ function Codes({ setErr }) {
             })}
           </tbody>
         </table>
-        {!rows.length && <p className="ad-dim">No access codes yet. Generate one above, then give it to whoever will host.</p>}
+        {!shown.length && <p className="ad-dim">{rows.length ? `No access codes match "${filter}".` : 'No access codes yet. Generate one above, then give it to whoever will host.'}</p>}
       </div>
     </>
   );
 }
 
-function Songs({ setErr }) {
+function Songs({ setErr, q }) {
   const blank = { title: '', artist: '', youtube_id: '', language: 'OPM' };
-  const [q, setQ] = useState('');
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState(blank);
   const load = useCallback(() => admin.listSongs(q).then(setRows).catch((e) => setErr(e.message)), [q, setErr]);
@@ -256,7 +316,7 @@ function Songs({ setErr }) {
 
   return (
     <>
-      <form className="ad-form ad-songform" onSubmit={save}>
+      <form id="ad-song-form" className="ad-form ad-songform" onSubmit={save}>
         <strong>{form.id ? 'Edit song' : 'Add song'}</strong>
         <input placeholder="Title" value={form.title} onChange={set('title')} maxLength={100} required />
         <input placeholder="Artist" value={form.artist} onChange={set('artist')} maxLength={100} required />
@@ -267,7 +327,6 @@ function Songs({ setErr }) {
           {form.id && <button type="button" className="ad-btn ghost" onClick={() => setForm(blank)}>Cancel</button>}
         </div>
       </form>
-      <div className="ad-row"><input placeholder="Search number, title or artist" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <div className="ad-scroll">
         <table className="ad-table">
           <thead><tr><th>#</th><th>Title</th><th>Artist</th><th>Lang</th><th>Video</th><th /></tr></thead>
@@ -278,7 +337,7 @@ function Songs({ setErr }) {
                 <td>{s.title}</td><td>{s.artist}</td><td>{s.language}</td>
                 <td>{s.youtube_id ? 'Yes' : <span className="ad-dim">No</span>}</td>
                 <td className="ad-actions">
-                  <button className="ad-btn ghost small" onClick={() => { setForm({ id: s.id, title: s.title, artist: s.artist, youtube_id: s.youtube_id || '', language: s.language || 'Other' }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Edit</button>
+                  <button className="ad-btn ghost small" onClick={() => { setForm({ id: s.id, title: s.title, artist: s.artist, youtube_id: s.youtube_id || '', language: s.language || 'Other' }); document.getElementById('ad-song-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}>Edit</button>
                   <button className="ad-btn danger small" onClick={() => window.confirm(`Delete #${s.code} ${s.title}?`) && run(() => admin.deleteSong(s.id))}>Delete</button>
                 </td>
               </tr>
@@ -291,44 +350,122 @@ function Songs({ setErr }) {
   );
 }
 
+const NAV = [
+  ['hosts', 'Hosts and users', 'grid'],
+  ['codes', 'Access codes', 'key'],
+  ['songs', 'Songs', 'music'],
+];
+const PANEL = {
+  hosts: ['Live hosts', 'Rooms running right now'],
+  codes: ['Access codes', 'Codes that let someone start hosting'],
+  songs: ['Song catalog', 'Add, edit and remove songs'],
+};
+const SEARCH_HINT = { hosts: 'Search hosts by code or name', codes: 'Search codes or labels', songs: 'Search number, title or artist' };
+
 function Dashboard({ onSignOut }) {
   const nav = useNavigate();
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const [tab, setTab] = useState('hosts');
+  const [search, setSearch] = useState('');
   const refresh = useCallback(() => admin.loadOverview().then(setData).catch((e) => setErr(e.message)), []);
   useEffect(() => { refresh(); const t = setInterval(refresh, 5000); return () => clearInterval(t); }, [refresh]);
   const act = (fn) => async (...a) => { setErr(''); try { await fn(...a); await refresh(); } catch (e) { setErr(e.message || String(e)); } };
+  const go = (t) => { setTab(t); setSearch(''); };
 
   const now = Date.now();
   const activeUsers = data ? data.people.filter((p) => now - new Date(p.last_seen).getTime() < ACTIVE_MS).length : 0;
-  const cards = data && [
-    ['Hosts', data.rooms.length], ['Users', data.people.length], ['Active users', activeUsers],
-    ['Songs queued', data.queue.length], ['Songs in catalog', data.songCount],
-  ];
+  const timed = data ? data.rooms.filter((r) => r.expires_at).sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at)).slice(0, 5) : [];
+  const [title, sub] = PANEL[tab];
 
   return (
-    <main className="ad">
-      <header className="ad-top">
-        <h1>TagayOke Admin</h1>
-        <div className="ad-row">
-          {admin.DEMO && <span className="ad-badge">Demo mode</span>}
-          <button className="ad-btn ghost small" onClick={() => nav('/')}>Back to app</button>
-          {!admin.DEMO && <button className="ad-btn ghost small" onClick={onSignOut}>Sign out</button>}
+    <main className="ad-shell">
+      {/* ---------- sidebar ---------- */}
+      <aside className="ad-side">
+        <div className="ad-brand"><span className="ad-brand-mark"><Icon name="mic" size={22} /></span><span className="ad-brand-name">TagayOke</span></div>
+        <nav className="ad-nav" role="tablist" aria-label="Admin sections">
+          {NAV.map(([id, text, icon]) => (
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => go(id)}><Icon name={icon} />{text}</button>
+          ))}
+        </nav>
+        <div className="ad-side-foot">
+          <button className="ad-navlink" onClick={() => nav('/')}><Icon name="back" />Back to app</button>
+          {!admin.DEMO && <button className="ad-navlink" onClick={onSignOut}><Icon name="out" />Sign out</button>}
+          <p>Updates every 5 seconds</p>
         </div>
-      </header>
-      {err && <p className="ad-err" role="alert">{err}</p>}
-      {cards && <section className="ad-cards">{cards.map(([label, n]) => <div className="ad-card" key={label}><b>{n}</b><span>{label}</span></div>)}</section>}
-      <nav className="ad-tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'hosts'} onClick={() => setTab('hosts')}>Hosts and users</button>
-        <button role="tab" aria-selected={tab === 'codes'} onClick={() => setTab('codes')}>Access codes</button>
-        <button role="tab" aria-selected={tab === 'songs'} onClick={() => setTab('songs')}>Songs</button>
-      </nav>
-      {!data && <p className="ad-dim">Loading…</p>}
-      {data && tab === 'hosts' && <Hosts data={data} act={act} />}
-      {tab === 'codes' && <Codes setErr={setErr} />}
-      {tab === 'songs' && (admin.DEMO ? <p className="ad-dim">Songs are managed in Supabase. Connect it to edit the catalog here.</p> : <Songs setErr={setErr} />)}
-      <p className="ad-dim ad-foot">Updates every 5 seconds. A user is "active" if their phone checked in within the last 2 minutes.</p>
+      </aside>
+
+      <div className="ad-main">
+        {/* ---------- top bar ---------- */}
+        <header className="ad-topbar">
+          <label className="ad-search">
+            <Icon name="search" size={18} />
+            <input type="search" placeholder={SEARCH_HINT[tab]} value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search" />
+          </label>
+          <div className="ad-top-right">
+            {admin.DEMO && <span className="ad-badge">Demo mode</span>}
+            <span className="ad-me"><span className="ad-avatar">A</span><span className="ad-me-name">Admin</span></span>
+          </div>
+        </header>
+
+        {/* ---------- content panel ---------- */}
+        <div className="ad-panelwrap">
+          {err && <p className="ad-err" role="alert">{err}</p>}
+          <div className="ad-grid">
+            <div className="ad-left">
+              <section className="ad-hero">
+                <div className="ad-hero-text">
+                  <h1>Hello, Admin!</h1>
+                  <p>
+                    {data
+                      ? `${data.rooms.length} host${data.rooms.length === 1 ? ' is' : 's are'} running with ${activeUsers} active ${activeUsers === 1 ? 'singer' : 'singers'} and ${data.queue.length} song${data.queue.length === 1 ? '' : 's'} in the queue.`
+                      : 'Loading the latest numbers…'}
+                  </p>
+                  <button className="ad-btn dark" onClick={() => { go('codes'); setTimeout(() => document.getElementById('ad-new-code')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); }}><Icon name="plus" size={18} />New access code</button>
+                </div>
+                <HeroArt />
+              </section>
+
+              <section className="ad-card-panel">
+                <div className="ad-panel-head"><h2>{title}</h2><span className="ad-dim">{sub}</span></div>
+                {!data && tab === 'hosts' && <p className="ad-dim">Loading…</p>}
+                {data && tab === 'hosts' && <Hosts data={data} act={act} filter={search} />}
+                {tab === 'codes' && <Codes setErr={setErr} filter={search} />}
+                {tab === 'songs' && (admin.DEMO ? <p className="ad-dim">Songs are managed in Supabase. Connect it to edit the catalog here.</p> : <Songs setErr={setErr} q={search} />)}
+              </section>
+            </div>
+
+            <div className="ad-right">
+              {data && (
+                <>
+                  <div className="ad-stat s-blue"><span className="ad-stat-ico"><Icon name="grid" /></span><div><b>{data.rooms.length}</b><span>Hosts</span></div></div>
+                  <div className="ad-stat s-pink"><span className="ad-stat-ico"><Icon name="users" /></span><div><b>{activeUsers}</b><span>Active users</span></div></div>
+                  <div className="ad-stat s-yellow"><span className="ad-stat-ico"><Icon name="list" /></span><div><b>{data.queue.length}</b><span>Songs queued</span></div></div>
+                </>
+              )}
+              <section className="ad-side-panel">
+                <div className="ad-side-head"><h2>Ending soon</h2><span>Timed hosts</span></div>
+                {data && !timed.length && <p className="ad-dim ad-pad">No timed hosts running.</p>}
+                <ul className="ad-timeline">
+                  {timed.map((r) => (
+                    <li key={r.code}>
+                      <span className="ad-when"><TimeLeft expiresAt={r.expires_at} /></span>
+                      <span className="ad-what"><b>{r.name || 'Unnamed'}</b><small className="ad-dim">Code {r.code}</small></span>
+                    </li>
+                  ))}
+                </ul>
+                {data && (
+                  <div className="ad-mini">
+                    <div><b>{data.people.length}</b><span>Total users</span></div>
+                    <div><b>{data.songCount}</b><span>Songs in catalog</span></div>
+                  </div>
+                )}
+                <p className="ad-dim ad-pad ad-note">A user is "active" if their phone checked in within the last 2 minutes.</p>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
@@ -345,14 +482,16 @@ export default function Admin() {
   useEffect(() => { check(); }, [check]);
   const out = async () => { await admin.signOut(); setGate('login'); };
 
-  if (gate === 'checking') return <main className="ad ad-narrow"><p className="ad-dim">Checking access…</p></main>;
+  if (gate === 'checking') return <main className="ad-auth"><p className="ad-dim ad-onblue">Checking access…</p></main>;
   if (gate === 'login') return <Login onDone={check} />;
   if (gate === 'denied') {
     return (
-      <main className="ad ad-narrow">
-        <h1>No access</h1>
-        <p className="ad-dim">This account is not an admin. Add its user to the admins table in Supabase, then sign in again.</p>
-        <button className="ad-btn ghost" onClick={out}>Sign out</button>
+      <main className="ad-auth">
+        <div className="ad-auth-card">
+          <h1>No access</h1>
+          <p className="ad-dim">This account is not an admin. Add its user to the admins table in Supabase, then sign in again.</p>
+          <button className="ad-btn ghost" onClick={out}>Sign out</button>
+        </div>
       </main>
     );
   }
