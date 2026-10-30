@@ -65,6 +65,8 @@ export default function Landing() {
       {err && <p className="error" role="alert">{err}</p>}
       {USE_MOCK && <p className="muted">Demo mode: create an access code in /admin first, then use it here. Open Host in one tab and Join in another tab of this browser.</p>}
       <p className="fine">Drink responsibly. Never drive after drinking.</p>
+      {/* Hidden admin entrance: an invisible button sitting over one face in the background photo */}
+      <button type="button" className="admin-secret" aria-label="Admin" tabIndex={-1} onClick={() => nav('/admin')} />
     </main>
   );
 }

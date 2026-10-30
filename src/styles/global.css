@@ -1426,3 +1426,29 @@ input:focus {
 .idle-timer b { font-family: var(--display); letter-spacing: .06em; color: var(--yellow); }
 .idle-timer.warn { background: var(--pink); color: #fff; }
 .idle-timer.warn b { color: #fff; }
+
+/* ================================
+   HIDDEN ADMIN BUTTON (landing page)
+   Invisible, placed over a face in the background photo.
+   The photo is stretched 100% x 100%, so percentages line up on every screen.
+   Tweak left/top/width/height to move it; add a background to see it while testing.
+================================ */
+.admin-secret {
+  position: fixed;
+  left: 41%;
+  top: 69%;
+  width: 20%;
+  height: 16%;
+  z-index: 5;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  opacity: 0;
+  cursor: default;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* DEBUG: uncomment to see where the button is
+.admin-secret { opacity: 1; background: rgba(255, 0, 0, 0.35); }
+*/
