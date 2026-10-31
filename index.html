@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0a1650" />
+    <meta name="theme-color" content="#f6ecd4" />
     <meta name="description" content="Sing. Sip. Repeat. A videoke queue for your phone and your TV." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -19,8 +19,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet" />
 
     <style>
-      html, body { margin: 0; background: #080e38; color: #fff; font-family: sans-serif; }
-      #boot { padding: 2rem; font-size: 1.4rem; }
+      /* Same cream as the splash screen, so nothing but the splash shows while the app loads */
+      html, body { margin: 0; background: #f6ecd4; color: #221c16; font-family: sans-serif; }
     </style>
 
     <!-- Old-browser error display. Plain ES5 on purpose. -->
@@ -47,7 +47,7 @@
     </script>
   </head>
   <body>
-    <div id="root"><div id="boot">Loading Tagay-Oke!…</div></div>
+    <div id="root"></div>
     <noscript><p style="padding:2rem">Please enable JavaScript to use Tagay-Oke!</p></noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
