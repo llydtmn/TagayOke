@@ -407,9 +407,13 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   display: grid;
   place-items: center;
   /* same photo as the start page, with the same blue tint over it */
-  background:
-    linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
-    url("/boli-fam.jpg") center / cover no-repeat;
+  background-color: #0a1650;
+  background-image:
+    linear-gradient(rgba(10, 22, 80, 0.2), rgba(10, 22, 80, 0.2)),
+    url("/boli-fam.jpg");
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
   box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.65);
   isolation: isolate;
 }
@@ -699,13 +703,25 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .host::before {
   content: "";
   position: fixed;
-  inset: 0;
-  z-index: -1;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 0;
   pointer-events: none;
-  background:
-    linear-gradient(rgba(6, 10, 40, 0.6), rgba(6, 10, 40, 0.84)),
-    url("/boli-fam.jpg") center / 100% 100% no-repeat;
+  background-color: #080e38;
+  background-image:
+    linear-gradient(rgba(6, 10, 40, 0.18), rgba(6, 10, 40, 0.38)),
+    url("/boli-fam.jpg");
+  background-position: center center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
+
+/* keep page content above the photo layer */
+.landing > *, .host > * { position: relative; z-index: 1; }
+.landing > .admin-secret { position: fixed; }
+.landing > .announce { position: absolute; }
+
+/* keep small text readable over the lighter photo */
+.landing .lede, .landing .fine, .landing .tagline { text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
 /* ---- Fullscreen: reserved-songs bar across the top, like a traditional videoke ---- */
 .stage-screen { position: relative; }
 
@@ -1103,31 +1119,4 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   .timeup-title { font-size: 3rem; }
   .timeup-text { font-size: 1.3rem; }
   .yt-paused p { font-size: 2.2rem; }
-}
-
-/* ---- restore boli-fam.jpg backgrounds ---- */
-.landing::before,
-.host::before {
-  content: "";
-  position: fixed;
-  top: 0; right: 0; bottom: 0; left: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-color: #080e38;
-  background-image:
-    linear-gradient(rgba(6, 10, 40, 0.6), rgba(6, 10, 40, 0.84)),
-    url("/boli-fam.jpg");
-  background-position: center center;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-}
-
-.tv-screen {
-  background-color: #0a1650;
-  background-image:
-    linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
-    url("/boli-fam.jpg");
-  background-position: center center;
-  background-size: cover;
-  background-repeat: no-repeat;
 }
