@@ -1,3 +1,4 @@
+import { fsActive, enterPageFullscreen, exitPageFullscreen } from '../utils/fullscreen';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import YouTubePlayer from './YouTubePlayer';
 import DemoStage from './DemoStage';
@@ -96,6 +97,7 @@ function ReservedBar({ item, upNext, mode, left }) {
         <span className="reserved-label">RESERVED</span>
         <span className="reserved-num">{upNext.length}</span>
       </div>
+      <span className="reserved-colon" aria-hidden="true">:</span>
 
       {view === 'current' && (
         <p className="reserved-msg" key="current">
@@ -162,16 +164,10 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
   posCb.current = onPosition;
   const onProgress = useCallback((t, total) => { setMode(pickMode(t, total)); posCb.current?.(t); }, []);
 
-  // Fullscreen the whole screen box (video + top bar), not just the YouTube iframe,
-  // otherwise our bar would be hidden behind the player's own fullscreen.
+  // Fullscreen the WHOLE PAGE (not just the player box), so it stays full screen when the queue finishes
+  // and the player gives way to the idle TV. The top bar and layout adapt through the host-fs class.
   const toggleFullscreen = useCallback(() => {
-    const el = screen.current;
-    if (!el) return;
-    if (fsElement() === el) {
-      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
-    } else {
-      (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
-    }
+    if (fsActive()) exitPageFullscreen(); else enterPageFullscreen();
   }, []);
 
   if (!item) {

@@ -1164,3 +1164,80 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .dancer .d-head .d-face-bg { fill: currentColor; stroke: none; }
 .d-face { animation: face-in 0.4s ease; }
 @keyframes face-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---- Fullscreen top bar, simplified: queue-count circle, a colon, then the current / next song (no bar, no "RESERVED" word) ---- */
+.reserved-bar { background: none; border-bottom: 0; }
+.reserved-label, .msg-label:not(.next) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.reserved-bar .reserved-num { min-width: 2.1em; padding: 0.25em 0.6em; font-size: clamp(1rem, 2vw, 2.2rem); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); }
+.reserved-colon { flex: none; margin-left: -0.4rem; font-family: var(--display); font-size: clamp(1.1rem, 2vw, 2.2rem); line-height: 1; color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); }
+.reserved-bar .reserved-msg, .reserved-bar .reserved-list li, .reserved-bar .reserved-empty { color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 2px #000; }
+.reserved-bar .msg-sub, .reserved-bar .reserved-code, .reserved-bar .reserved-singer { color: #fff; opacity: 0.9; }
+.reserved-bar .reserved-pos, .reserved-bar .msg-label.next { color: var(--yellow); }
+
+/* ---- Four extra dancers along the bottom of the idle TV: smaller, faster, and wilder ---- */
+.dancer.small { height: 30%; bottom: -5%; z-index: 3; transform-origin: 50% 70%; animation: dz-hop 0.9s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+.dancer.s1 { left: 0; color: #35e0c8; --ph: 0s; }
+.dancer.s2 { left: 0; color: #8cff6b; --ph: -0.3s; animation-duration: 0.7s; }
+.dancer.s3 { left: 0; color: #ff9a3c; --ph: -0.5s; animation: dz-flip 3.2s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+.dancer.s4 { left: 0; color: #b48cff; --ph: -0.15s; animation-duration: 0.75s; }
+.dancer.small .d-body { animation: d-bob-x 0.5s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+.dancer.small .d-head { animation: d-head 0.3s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+.dancer.small .d-arm-l { animation: d-arm-l-x 0.4s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+.dancer.small .d-arm-r { animation: d-arm-r-x 0.4s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+.dancer.small .d-fore-l, .dancer.small .d-fore-r { animation-duration: 0.2s; }
+.dancer.small .d-leg-l, .dancer.small .d-leg-r { animation: d-leg-x 0.25s ease-in-out infinite alternate; animation-delay: var(--ph, 0s); }
+.dancer.small .d-leg-r { animation-direction: alternate-reverse; }
+.dancer.small .d-shin { animation-duration: 0.25s; }
+@keyframes d-bob-x { 0%, 100% { transform: translateY(0) rotate(-9deg); } 50% { transform: translateY(-30px) rotate(9deg); } }
+@keyframes d-arm-l-x { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(170deg); } }
+@keyframes d-arm-r-x { 0%, 100% { transform: rotate(-170deg); } 50% { transform: rotate(-10deg); } }
+@keyframes d-leg-x { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
+@keyframes dz-hop {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  25% { transform: translateY(-14px) rotate(4deg); }
+  50% { transform: translateY(0) rotate(3deg); }
+  75% { transform: translateY(-9px) rotate(-5deg); }
+}
+@keyframes dz-flip {
+  0%, 60% { transform: translateY(0) rotate(0); }
+  72% { transform: translateY(-36px) rotate(180deg); }
+  84% { transform: translateY(-10px) rotate(360deg); }
+  100% { transform: translateY(0) rotate(360deg); }
+}
+@media (max-width: 760px) { .dancer.small { display: none; } }
+
+/* ---- The four small dancers roam the whole screen (a wrapper travels, the dancer keeps dancing inside it) ---- */
+.roam { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 3; pointer-events: none; will-change: transform; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.roam .dancer.small { left: 0; }
+.roam.r1 { animation-name: roam-1; animation-duration: 11s; }
+.roam.r2 { animation-name: roam-2; animation-duration: 13s; animation-delay: -4s; }
+.roam.r3 { animation-name: roam-3; animation-duration: 9s;  animation-delay: -2s; }
+.roam.r4 { animation-name: roam-4; animation-duration: 12s; animation-delay: -7s; }
+@keyframes roam-1 { 0%, 100% { transform: translate(5%, 0); } 20% { transform: translate(40%, -40%); } 40% { transform: translate(80%, -10%); } 60% { transform: translate(60%, -60%); } 80% { transform: translate(15%, -30%); } }
+@keyframes roam-2 { 0%, 100% { transform: translate(30%, -50%); } 20% { transform: translate(75%, -5%); } 40% { transform: translate(88%, -55%); } 60% { transform: translate(45%, -20%); } 80% { transform: translate(10%, -45%); } }
+@keyframes roam-3 { 0%, 100% { transform: translate(60%, 0); } 20% { transform: translate(20%, -55%); } 40% { transform: translate(5%, -15%); } 60% { transform: translate(50%, -35%); } 80% { transform: translate(90%, -50%); } }
+@keyframes roam-4 { 0%, 100% { transform: translate(85%, -30%); } 20% { transform: translate(55%, -5%); } 40% { transform: translate(25%, -25%); } 60% { transform: translate(70%, -60%); } 80% { transform: translate(40%, -45%); } }
+@media (max-width: 760px) { .roam { display: none; } }
+
+/* ---- Two singers that stay put: mic at the mouth, swaying, free hand waving ---- */
+.dancer.singer { height: 36%; bottom: -3%; z-index: 3; animation: none; }
+.dancer.sing1 { left: 25%; color: #ff6b6b; }
+.dancer.sing2 { left: auto; right: 27%; color: #4da3ff; }
+.singer .s-body { animation: sing-sway 1.4s ease-in-out infinite; }
+.singer .s-head { animation: sing-head 0.7s ease-in-out infinite alternate; }
+.singer .s-arm-mic { animation: sing-mic 0.5s ease-in-out infinite alternate; }
+.singer .s-arm-free { animation: sing-free 1.1s ease-in-out infinite alternate; }
+.singer .s-fore-free { animation: sing-fore 0.55s ease-in-out infinite alternate; }
+.singer.sing2 .s-body { animation-delay: -0.6s; }
+.singer.sing2 .s-arm-free { animation-delay: -0.4s; }
+.singer .d-head circle, .singer .s-head .d-face-bg { fill: currentColor; stroke: none; }
+.singer .d-face-ring { fill: none; stroke: currentColor; stroke-width: 5; }
+.singer .s-note { fill: #fff; stroke: none; font-size: 26px; opacity: 0; filter: drop-shadow(0 0 6px currentColor); animation: sing-note 1.8s ease-out infinite; }
+.singer .s-note.n2 { animation-delay: -0.9s; }
+@keyframes sing-sway { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
+@keyframes sing-head { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+@keyframes sing-mic { from { transform: rotate(-3deg); } to { transform: rotate(4deg); } }
+@keyframes sing-free { from { transform: rotate(-20deg); } to { transform: rotate(55deg); } }
+@keyframes sing-fore { from { transform: rotate(-15deg); } to { transform: rotate(25deg); } }
+@keyframes sing-note { 0% { transform: translate(0, 12px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(14px, -34px); opacity: 0; } }
+@media (max-width: 760px) { .dancer.singer { display: none; } }

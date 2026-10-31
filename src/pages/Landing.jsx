@@ -6,6 +6,7 @@ import { normalizeAccessCode, accessKey } from '../utils/hostCode';
 import { enterPageFullscreen, exitPageFullscreen } from '../utils/fullscreen';
 import Announcement from '../components/Announcement';
 import Icon from '../components/Icon';
+import { HatchDefs, Mic, Notes, Waves, Burst } from '../components/VintageArt';
 
 export default function Landing() {
   const nav = useNavigate();
@@ -38,8 +39,14 @@ export default function Landing() {
   };
 
   return (
-    <main className="landing">
+    <main className="landing vt">
+      <HatchDefs />
       <Announcement />
+      <div className="vt-hero"><Burst className="vt-burst" size={150} /><Mic className="vt-hero-mic" size={130} /><Notes className="vt-note n1" size={44} /><Waves className="vt-wave" size={90} />
+        {/* Hidden admin entrance: an invisible button sitting over the microphone */}
+        <button type="button" className="admin-secret" aria-label="Admin" tabIndex={-1} onClick={() => nav('/admin')} />
+      </div>
+      <div className="vt-frames" aria-hidden="true">{[1, 2, 3, 4, 5, 6].map((n) => <span key={n} className={`vt-frame f${n}`}><i /></span>)}</div>
       <h1 className="logo">{APP_NAME}</h1>
       <p className="tagline">{TAGLINE}</p>
       <p className="lede">Reserve songs from your phone while someone else is mid-chorus. Numbered songs, a song book and a queue, like the real machine.</p>
@@ -68,8 +75,6 @@ export default function Landing() {
       {err && <p className="error" role="alert">{err}</p>}
       {USE_MOCK && <p className="muted">Demo mode: create an access code in /admin first, then use it here. Open Host in one tab and Join in another tab of this browser.</p>}
       <p className="fine">Drink responsibly. Never drive after drinking.</p>
-      {/* Hidden admin entrance: an invisible button sitting over one face in the background photo */}
-      <button type="button" className="admin-secret" aria-label="Admin" tabIndex={-1} onClick={() => nav('/admin')} />
     </main>
   );
 }

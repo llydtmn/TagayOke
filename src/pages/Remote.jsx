@@ -5,12 +5,12 @@ import { joinRoom, pingRoom } from '../services/presence';
 import { useQueue } from '../hooks/useQueue';
 import SongBook from '../components/SongBook';
 import QueueList from '../components/QueueList';
-import Keypad from '../components/Keypad';
 import AddSongForm from '../components/AddSongForm';
 import Icon from '../components/Icon';
+import { HatchDefs, Mic, Notes } from '../components/VintageArt';
 import { MAX_QUEUE } from '../config/env';
 
-const TABS = [['keypad', 'Keypad', 'keypad'], ['book', 'Song book', 'book'], ['add', 'Add link', 'link'], ['queue', 'Queue', 'queue']];
+const TABS = [['book', 'Song book', 'book'], ['add', 'Add link', 'link'], ['queue', 'Queue', 'queue']];
 
 const REPORTED = new Set(); // songs this phone already reported (module level so it needs no hook)
 
@@ -20,7 +20,7 @@ export default function Remote() {
   const [exists, setExists] = useState(null);
   const [name, setName] = useState(localStorage.getItem('tagayoke:name') || '');
   const [draft, setDraft] = useState('');
-  const [tab, setTab] = useState('keypad');
+  const [tab, setTab] = useState('book');
   const [toast, setToast] = useState('');
   const { queue, nowPlaying, add, error } = useQueue(code);
 
@@ -47,7 +47,7 @@ export default function Remote() {
   }, [code, nav]);
 
   if (exists === false) {
-    return <main className="landing"><p className="error">Room {code} was not found.</p><Link to="/">Back to start</Link></main>;
+    return <main className="landing vt"><HatchDefs /><p className="error">Room {code} was not found.</p><Link to="/">Back to start</Link></main>;
   }
 
   if (!name) {
@@ -57,7 +57,9 @@ export default function Remote() {
       if (n) { localStorage.setItem('tagayoke:name', n); setName(n); }
     };
     return (
-      <main className="landing">
+      <main className="landing vt">
+        <HatchDefs />
+        <Mic className="vt-hero-mic" size={96} />
         <h1 className="logo small">Join {code}</h1>
         <form onSubmit={save}>
           <label className="field"><span>What should we call you on the queue?</span>
@@ -94,10 +96,11 @@ export default function Remote() {
   };
 
   return (
-    <main className="remote">
+    <main className="remote vt">
+      <HatchDefs />
       <header className="remote-head">
         <span className="logo small" aria-label={`Room ${code}`}>{code}</span>
-        <p className="muted" aria-live="polite">{nowPlaying ? `Now: ${nowPlaying.song.title}` : 'Nothing playing yet'}</p>
+        <p className="muted now-bubble" aria-live="polite"><Notes size={16} />{nowPlaying ? `Now: ${nowPlaying.song.title}` : 'Nothing playing yet'}</p>
       </header>
       {nowPlaying && !REPORTED.has(nowPlaying.id) && (
         <button className="report-link" onClick={() => { REPORTED.add(nowPlaying.id); api.reportSong(nowPlaying.song.id, 'broken'); flash('Thanks! We will check this song.'); }}>
@@ -113,7 +116,6 @@ export default function Remote() {
       </nav>
       {full && <p className="muted" role="status">Queue is full ({queue.length}/{MAX_QUEUE}). You can reserve again once a song finishes.</p>}
       <div id="remote-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-        {tab === 'keypad' && <Keypad onReserve={reserve} onList={() => setTab('book')} />}
         {tab === 'book' && <SongBook onReserve={reserve} />}
         {tab === 'add' && <AddSongForm onReserve={reserve} />}
         {tab === 'queue' && <QueueList items={queue} empty="Nobody has reserved a song yet. Open the song book and go first." />}

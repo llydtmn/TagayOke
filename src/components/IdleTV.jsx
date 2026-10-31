@@ -26,7 +26,7 @@ function useFace(start, delay) {
 function Dancer({ className = '', mic = false, flip = false, start = 0, delay = 0 }) {
   const o = (x, y) => ({ transformOrigin: `${x}px ${y}px` });
   const face = useFace(start, delay);
-  const clipId = `face-clip-${className || 'x'}`;
+  const clipId = `face-clip-${(className || 'x').replace(/\W+/g, '-')}`;
   return (
     <svg className={`dancer ${className}`} viewBox="0 0 200 290" aria-hidden="true" focusable="false">
       <g className="d-body" style={o(100, 150)}>
@@ -73,6 +73,43 @@ function Dancer({ className = '', mic = false, flip = false, start = 0, delay = 
   );
 }
 
+// A singer who stays in one spot: holds a mic to the mouth, sways, and gestures with the free hand.
+// `photo` = { cx, cy, size }: the face's centre and size (in pixels) inside /boli-fam.jpg, so the head wears that person.
+const PHOTO_W = 1154;
+const PHOTO_H = 866;
+function Singer({ className = '', photo }) {
+  const o = (x, y) => ({ transformOrigin: `${x}px ${y}px` });
+  const k = 74 / photo.size; // photo pixels -> head units
+  const clipId = `singer-clip-${className.replace(/\W+/g, '-')}`;
+  return (
+    <svg className={`dancer singer ${className}`} viewBox="0 0 200 290" aria-hidden="true" focusable="false">
+      <g className="s-body" style={o(100, 150)}>
+        <line x1="92" y1="150" x2="84" y2="206" /><line x1="84" y1="206" x2="82" y2="260" /><line x1="82" y1="262" x2="64" y2="266" />
+        <line x1="108" y1="150" x2="116" y2="206" /><line x1="116" y1="206" x2="118" y2="260" /><line x1="118" y1="262" x2="136" y2="266" />
+        <line className="d-torso" x1="100" y1="92" x2="100" y2="150" />
+        <g className="s-arm-free" style={o(82, 96)}>
+          <line x1="82" y1="96" x2="52" y2="112" />
+          <g className="s-fore-free" style={o(52, 112)}><line x1="52" y1="112" x2="30" y2="78" /></g>
+        </g>
+        <g className="s-head" style={o(100, 72)}>
+          <defs><clipPath id={clipId}><circle cx="100" cy="44" r="37" /></clipPath></defs>
+          <circle className="d-face-bg" cx="100" cy="44" r="37" />
+          <image href="/boli-fam.jpg" xlinkHref="/boli-fam.jpg" x={100 - photo.cx * k} y={44 - photo.cy * k}
+            width={PHOTO_W * k} height={PHOTO_H * k} clipPath={`url(#${clipId})`} />
+          <circle className="d-face-ring" cx="100" cy="44" r="37" />
+        </g>
+        <g className="s-arm-mic" style={o(118, 96)}>
+          <line x1="118" y1="96" x2="150" y2="108" />
+          <line x1="150" y1="108" x2="136" y2="84" />
+          <circle className="d-mic" cx="132" cy="76" r="12" />
+        </g>
+      </g>
+      <text className="s-note n1" x="150" y="52">♪</text>
+      <text className="s-note n2" x="162" y="40">♫</text>
+    </svg>
+  );
+}
+
 const NOTES = [
   { n: '♪', x: '8%',  d: '0s',   s: '1.6rem' },
   { n: '♫', x: '22%', d: '-2.2s', s: '2.2rem' },
@@ -98,6 +135,14 @@ export default function IdleTV({ roomCode }) {
           ))}
           <Dancer className="left" mic start={0} delay={0} />
           <Dancer className="right" flip start={9} delay={1500} />
+          {/* four extra wild dancers that roam all over the screen */}
+          {/* two singers who stay in one place, wearing faces from the group photo */}
+          <Singer className="sing1" photo={{ cx: 91, cy: 467, size: 195 }} />
+          <Singer className="sing2" photo={{ cx: 899, cy: 641, size: 215 }} />
+          <div className="roam r1" aria-hidden="true"><Dancer className="small s1" start={4} delay={700} /></div>
+          <div className="roam r2" aria-hidden="true"><Dancer className="small s2" mic start={7} delay={2100} /></div>
+          <div className="roam r3" aria-hidden="true"><Dancer className="small s3" start={11} delay={900} /></div>
+          <div className="roam r4" aria-hidden="true"><Dancer className="small s4" mic start={14} delay={2700} /></div>
           <div className="tv-content">
             <p className="lyric">Walang kumakanta pa.</p>
             <p className="tv-hint">
