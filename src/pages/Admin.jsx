@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import * as admin from '../services/admin';
 import { getAnnouncement, saveAnnouncement } from '../services/settings';
 import { AnnouncementView } from '../components/Announcement';
-import { parseYouTubeId } from '../utils/youtube';
+import Songs from './admin/Songs';
+import History from './admin/History';
 import { formatDuration, formatLeft } from '../utils/hostCode';
 import '../styles/admin.css';
 
@@ -320,62 +321,6 @@ function Codes({ setErr, filter }) {
   );
 }
 
-function Songs({ setErr, q }) {
-  const blank = { title: '', artist: '', youtube_id: '', language: 'OPM' };
-  const [rows, setRows] = useState([]);
-  const [form, setForm] = useState(blank);
-  const load = useCallback(() => admin.listSongs(q).then(setRows).catch((e) => setErr(e.message)), [q, setErr]);
-  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [load]);
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const run = async (fn) => { setErr(''); try { await fn(); await load(); } catch (e) { setErr(e.message || String(e)); } };
-
-  const save = (e) => {
-    e.preventDefault();
-    const raw = form.youtube_id.trim();
-    const vid = raw ? parseYouTubeId(raw) : null;
-    if (raw && !vid) return setErr('That is not a YouTube link or video ID.');
-    return run(async () => {
-      await admin.saveSong({ ...form, title: form.title.trim(), artist: form.artist.trim(), youtube_id: vid });
-      setForm(blank);
-    });
-  };
-
-  return (
-    <>
-      <form id="ad-song-form" className="ad-form ad-songform" onSubmit={save}>
-        <strong>{form.id ? 'Edit song' : 'Add song'}</strong>
-        <input placeholder="Title" value={form.title} onChange={set('title')} maxLength={100} required />
-        <input placeholder="Artist" value={form.artist} onChange={set('artist')} maxLength={100} required />
-        <input placeholder="YouTube link or video ID (optional)" value={form.youtube_id} onChange={set('youtube_id')} />
-        <select value={form.language} onChange={set('language')}><option>OPM</option><option>English</option><option>Other</option></select>
-        <div className="ad-row">
-          <button className="ad-btn">{form.id ? 'Save changes' : 'Add song'}</button>
-          {form.id && <button type="button" className="ad-btn ghost" onClick={() => setForm(blank)}>Cancel</button>}
-        </div>
-      </form>
-      <div className="ad-scroll">
-        <table className="ad-table">
-          <thead><tr><th>#</th><th>Title</th><th>Artist</th><th>Lang</th><th>Video</th><th /></tr></thead>
-          <tbody>
-            {rows.map((s) => (
-              <tr key={s.id}>
-                <td><span className="ad-code small">{s.code}</span></td>
-                <td className="ad-song-title">{s.title}</td><td data-label="Artist">{s.artist}</td><td data-label="Language">{s.language}</td>
-                <td data-label="Video">{s.youtube_id ? 'Yes' : <span className="ad-dim">No</span>}</td>
-                <td className="ad-actions">
-                  <button className="ad-btn ghost small" onClick={() => { setForm({ id: s.id, title: s.title, artist: s.artist, youtube_id: s.youtube_id || '', language: s.language || 'Other' }); document.getElementById('ad-song-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}>Edit</button>
-                  <button className="ad-btn danger small" onClick={() => window.confirm(`Delete #${s.code} ${s.title}?`) && run(() => admin.deleteSong(s.id))}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!rows.length && <p className="ad-dim">No songs found.</p>}
-      </div>
-    </>
-  );
-}
-
 // ---------- Reports & analytics ----------
 const DAYS = 14;
 const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
@@ -597,17 +542,19 @@ const NAV = [
   ['hosts', 'Hosts and users', 'grid'],
   ['codes', 'Access codes', 'key'],
   ['songs', 'Songs', 'music'],
+  ['history', 'Session history', 'clock'],
   ['reports', 'Reports & analytics', 'chart'],
   ['settings', 'Settings', 'gear'],
 ];
 const PANEL = {
   hosts: ['Live hosts', 'Rooms running right now'],
   codes: ['Access codes', 'Codes that let someone start hosting'],
-  songs: ['Song catalog', 'Add, edit and remove songs'],
+  songs: ['Song catalog', 'Add, edit, import and check songs'],
+  history: ['Session history', 'Every hosted session, even after it ended'],
   reports: ['Reports & analytics', 'How the app is being used'],
   settings: ['Settings', 'Announcement and app-wide options'],
 };
-const SEARCH_HINT = { hosts: 'Search hosts by code or name', codes: 'Search codes or labels', songs: 'Search number, title or artist', reports: 'Search is not used here', settings: 'Search is not used here' };
+const SEARCH_HINT = { hosts: 'Search hosts by code or name', codes: 'Search codes or labels', songs: 'Search number, title or artist', history: 'Search by host, room or access code', reports: 'Search is not used here', settings: 'Search is not used here' };
 
 function Dashboard({ onSignOut }) {
   const nav = useNavigate();
@@ -681,6 +628,7 @@ function Dashboard({ onSignOut }) {
                 {tab === 'reports' && <Reports data={data} setErr={setErr} />}
                 {tab === 'settings' && <Settings setErr={setErr} />}
                 {tab === 'songs' && (admin.DEMO ? <p className="ad-dim">Songs are managed in Supabase. Connect it to edit the catalog here.</p> : <Songs setErr={setErr} q={search} />)}
+                {tab === 'history' && <History setErr={setErr} filter={search} />}
               </section>
             </div>
 

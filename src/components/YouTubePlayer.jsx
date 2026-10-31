@@ -21,10 +21,12 @@ const loadYT = () => {
 
 // Official IFrame Player only. Errors (removed or non-embeddable video) skip to the next song.
 // onProgress(currentSeconds, usableSeconds) is called about 4 times a second (drives the fullscreen top bar).
-export default function YouTubePlayer({ videoId, onEnded, onProgress, startAt = 0 }) {
+export default function YouTubePlayer({ videoId, onEnded, onProgress, onVideoError, startAt = 0 }) {
   const host = useRef(null);
   const cb = useRef(onEnded);
   cb.current = onEnded;
+  const errorCb = useRef(onVideoError);
+  errorCb.current = onVideoError;
   const progressCb = useRef(onProgress);
   progressCb.current = onProgress;
   const playerRef = useRef(null);
@@ -93,7 +95,8 @@ export default function YouTubePlayer({ videoId, onEnded, onProgress, startAt = 
             if (e.data === YT.PlayerState.PAUSED) setPaused(true);
             if (e.data === YT.PlayerState.ENDED) { setPaused(false); finish(); }
           },
-          onError: finish,
+          // 2 bad id, 100 removed or private, 101 / 150 embedding blocked. (5 is a player hiccup, so it is not reported.)
+          onError: (e) => { if ([2, 100, 101, 150].includes(e.data)) errorCb.current?.(e.data); finish(); },
         },
       });
     });

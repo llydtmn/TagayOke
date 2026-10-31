@@ -135,8 +135,10 @@ export async function listSongs(q = '') {
 }
 export async function saveSong({ id, title, artist, youtube_id, language }) {
   const row = { title, artist, youtube_id: youtube_id || null, language: language || 'Other' };
-  if (id) check(await supabase.from('songs').update(row).eq('id', id));
-  else check(await supabase.from('songs').insert({ ...row, source: 'admin' }));
+  if (id) {
+    check(await supabase.from('songs').update(row).eq('id', id));
+    if (row.youtube_id) await resolveSongReport(id).catch(() => {}); // a new video link counts as a fix
+  } else check(await supabase.from('songs').insert({ ...row, source: 'admin' }));
 }
 export async function deleteSong(id) {
   const { error } = await supabase.from('songs').delete().eq('id', id);
@@ -176,4 +178,90 @@ export async function loadReports() {
       bySource: countBy(rows, (s) => s.source),
     },
   };
+}
+
+// ---- session history (live mode only; needs supabase/session-history-and-song-reports.sql) ----
+const needsSql = (e) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache/i.test(e.message || ''));
+
+export async function listSessions(days = 30) {
+  if (DEMO) return { rows: [], missing: false };
+  let q = supabase.from('host_sessions').select('*').order('started_at', { ascending: false }).limit(1000);
+  if (days) q = q.gte('started_at', new Date(Date.now() - days * 86400000).toISOString());
+  const { data, error } = await q;
+  if (error) { if (needsSql(error)) return { rows: [], missing: true }; throw error; }
+  return { rows: data, missing: false };
+}
+
+// ---- song catalog health (live mode only) ----
+const PAGE = 1000; // Supabase returns at most 1000 rows per request
+export async function loadCatalogLite() {
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase.from('songs').select('id, code, title, artist, language, youtube_id').order('code').range(from, from + PAGE - 1);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < PAGE) break;
+  }
+  return out;
+}
+
+export async function listSongReports() {
+  const { data, error } = await supabase.from('song_reports').select('*').eq('resolved', false).order('last_reported_at', { ascending: false }).limit(500);
+  if (error) { if (needsSql(error)) return { rows: [], missing: true }; throw error; }
+  return { rows: data, missing: false };
+}
+export async function resolveSongReport(songId) {
+  const { error } = await supabase.from('song_reports').update({ resolved: true }).eq('song_id', songId);
+  if (error && !needsSql(error)) throw error;
+}
+export async function countNoVideo() {
+  const { count } = await supabase.from('songs').select('id', { count: 'exact', head: true }).is('youtube_id', null);
+  return count ?? 0;
+}
+
+// One page of the catalog. filter: 'all' | 'novideo' | 'reported'.
+export async function listSongsPage({ q = '', filter = 'all', offset = 0, limit = 50 }) {
+  let query = supabase.from('songs').select('*', { count: 'exact' }).order('code').range(offset, offset + limit - 1);
+  const s = q.trim().replace(/[,()%]/g, ' ');
+  if (s) query = /^\d+$/.test(s) ? query.eq('code', Number(s)) : query.or(`title.ilike.%${s}%,artist.ilike.%${s}%`);
+  if (filter === 'novideo') query = query.is('youtube_id', null);
+  if (filter === 'reported') {
+    const ids = (await listSongReports()).rows.map((r) => r.song_id);
+    if (!ids.length) return { rows: [], total: 0 };
+    query = query.in('id', ids);
+  }
+  const { data, error, count } = await query;
+  if (error) throw error;
+  return { rows: data, total: count ?? data.length };
+}
+
+// Deletes songs one by one. Songs that are in a queue right now are skipped, not an error.
+export async function deleteSongsSafe(ids) {
+  let deleted = 0; let blocked = 0;
+  for (const id of ids) {
+    const { error } = await supabase.from('songs').delete().eq('id', id);
+    if (!error) deleted += 1;
+    else if (error.code === '23503') blocked += 1;
+    else throw error;
+  }
+  return { deleted, blocked };
+}
+
+// Inserts in batches of 200. If a batch trips a unique rule, it falls back to row by row and skips the clashes.
+export async function importSongs(rows, onProgress) {
+  let added = 0; let skipped = 0;
+  const shape = (r) => ({ title: r.title, artist: r.artist, language: r.language || 'Other', youtube_id: r.youtube_id || null, source: 'admin' });
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200).map(shape);
+    const { error } = await supabase.from('songs').insert(chunk);
+    if (!error) added += chunk.length;
+    else if (error.code === '23505') {
+      for (const r of chunk) {
+        const one = await supabase.from('songs').insert(r);
+        if (!one.error) added += 1; else if (one.error.code === '23505') skipped += 1; else throw one.error;
+      }
+    } else throw error;
+    onProgress?.(Math.min(rows.length, i + 200));
+  }
+  return { added, skipped };
 }

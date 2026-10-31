@@ -4,6 +4,7 @@ import DemoStage from './DemoStage';
 import IdleTV from './IdleTV';
 import { formatLeft } from '../utils/hostCode';
 import Icon from './Icon';
+import { api } from '../services';
 
 const MAX_SHOWN = 4; // how many reserved songs fit on the top bar before "+N more"
 
@@ -191,7 +192,7 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
     <div className="stage">
       <div className="stage-screen" ref={screen}>
         {timeUp ? null : song.youtubeId
-          ? <YouTubePlayer key={item.id} videoId={song.youtubeId} onEnded={onEnded} onProgress={onProgress} startAt={startAt} />
+          ? <YouTubePlayer key={item.id} videoId={song.youtubeId} onEnded={onEnded} onProgress={onProgress} onVideoError={() => api.reportSong(song.id, 'broken')} startAt={startAt} />
           : <DemoStage key={item.id} song={song} onEnded={onEnded} onProgress={onProgress} startAt={startAt} />}
         {isFs && <ReservedBar item={item} upNext={upNext} mode={mode} left={left} />}
         <TimeReminder left={left} />

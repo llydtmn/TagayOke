@@ -1048,3 +1048,59 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .yt-paused p { font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem, 3.5vw, 3.2rem); }
 .yt-paused span { color: var(--muted); font-size: clamp(0.9rem, 1.5vw, 1.4rem); }
 .yt-hint { position: absolute; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 7; max-width: calc(100% - 2rem); padding: 0.6rem 1.1rem; border-radius: var(--r-pill); background: rgba(0, 0, 0, 0.78); color: var(--ink); border: 1px solid var(--border-strong); font-weight: 600; text-align: center; font-size: clamp(0.9rem, 1.4vw, 1.3rem); }
+
+/* "Video not working?" link on the phone remote */
+.report-link { min-height: 0; margin: -0.3rem 0 0.7rem; padding: 0.2rem 0; background: none; border: 0; color: var(--muted); font-size: 0.82rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.report-link:hover { color: var(--yellow); }
+
+/* ==========================================================================
+   OLD SMART-TV BROWSER FALLBACKS (append at end of file)
+   ========================================================================== */
+
+/* inset: 0 -> explicit sides */
+.gate, .timeup, .yt-paused, .yt-shield, .tv-screen::before, .tv-scan,
+.announce-dot::after, .landing::before, .host::before {
+  top: 0; right: 0; bottom: 0; left: 0;
+}
+
+/* Fullscreen rule was dropped by old browsers because of the :fullscreen selector */
+.stage-screen:-webkit-full-screen {
+  width: 100vw; height: 100vh; border: 0; border-radius: 0;
+}
+
+/* aspect-ratio fallback (16:9 box via padding) */
+@supports not (aspect-ratio: 1 / 1) {
+  .stage-screen { position: relative; height: 0; padding-top: 56.25%; }
+  .stage-screen > .yt-frame,
+  .stage-screen > .demo-stage {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  }
+  .stage-screen:-webkit-full-screen,
+  .host-fs .stage-screen { height: 100vh; padding-top: 0; }
+  .dancer { width: 14rem; }
+}
+
+/* clamp()/min()/max() fallbacks (those declarations are dropped on old engines) */
+@supports not (width: min(1px, 2px)) {
+  .landing { padding: 7rem 1.25rem 3rem; }
+  .remote { padding: 1rem 1rem 6rem; }
+  .tabs { top: 0.5rem; }
+  .toast { bottom: 1rem; }
+  .logo { font-size: 3.6rem; }
+  .lyric { font-size: 2.4rem; }
+  .demo-code { font-size: 5rem; }
+  .tv-screen { min-height: 30rem; }
+  .qr-svg { width: 180px; }
+  .tv-stand { gap: 12rem; }
+  .host-fs .qr-svg { width: 240px; }
+  .host-fs .tv-content .lyric { font-size: 3.5rem; }
+  .host-fs .tv-hint { font-size: 1.4rem; }
+  .reserved-bar { padding: 0.6rem 1rem; gap: 1rem; }
+  .reserved-label, .reserved-num, .reserved-list li, .reserved-empty,
+  .reserved-msg, .fs-timer-label, .fs-timer-time { font-size: 1.1rem; }
+  .time-reminder-title { font-size: 2rem; }
+  .time-reminder-sub { font-size: 1.1rem; }
+  .timeup-title { font-size: 3rem; }
+  .timeup-text { font-size: 1.3rem; }
+  .yt-paused p { font-size: 2.2rem; }
+}

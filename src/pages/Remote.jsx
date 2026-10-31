@@ -12,6 +12,8 @@ import { MAX_QUEUE } from '../config/env';
 
 const TABS = [['keypad', 'Keypad', 'keypad'], ['book', 'Song book', 'book'], ['add', 'Add link', 'link'], ['queue', 'Queue', 'queue']];
 
+const REPORTED = new Set(); // songs this phone already reported (module level so it needs no hook)
+
 export default function Remote() {
   const { code } = useParams();
   const nav = useNavigate();
@@ -97,6 +99,11 @@ export default function Remote() {
         <span className="logo small" aria-label={`Room ${code}`}>{code}</span>
         <p className="muted" aria-live="polite">{nowPlaying ? `Now: ${nowPlaying.song.title}` : 'Nothing playing yet'}</p>
       </header>
+      {nowPlaying && !REPORTED.has(nowPlaying.id) && (
+        <button className="report-link" onClick={() => { REPORTED.add(nowPlaying.id); api.reportSong(nowPlaying.song.id, 'broken'); flash('Thanks! We will check this song.'); }}>
+          Video not working? Report it
+        </button>
+      )}
       <nav className="tabs" role="tablist" aria-label="Remote sections" onKeyDown={onTabKey}>
         {TABS.map(([id, label, icon]) => (
           <button key={id} id={`tab-${id}`} role="tab" aria-selected={tab === id} aria-controls="remote-panel" tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)}>

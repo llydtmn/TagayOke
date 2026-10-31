@@ -135,3 +135,5 @@ export async function advance(code) {
   if (next) next.status = 'playing';
   save(db, code);
 }
+
+export async function reportSong() { /* demo mode has no catalog to fix */ }

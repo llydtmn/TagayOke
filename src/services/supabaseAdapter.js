@@ -120,3 +120,8 @@ export async function advance(code) {
   if (playing) check(await supabase.from('queue_items').update({ status: 'done' }).eq('id', playing.id));
   if (next) check(await supabase.from('queue_items').update({ status: 'playing' }).eq('id', next.id));
 }
+
+// A TV or phone says "this video does not work". Fire and forget: a failed report must never disturb the song.
+export async function reportSong(songId, reason = 'broken') {
+  try { await supabase.rpc('report_song', { p_song_id: String(songId), p_reason: reason }); } catch { /* ignore */ }
+}
