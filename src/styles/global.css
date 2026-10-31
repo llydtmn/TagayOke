@@ -1120,6 +1120,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   .timeup-text { font-size: 1.3rem; }
   .yt-paused p { font-size: 2.2rem; }
 }
+<<<<<<< HEAD
 
 /* ---- Message from the admin, shown over the TV (inside the stage box, so it also shows in full screen) ---- */
 .stage.idle { position: relative; }
@@ -1164,3 +1165,5 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .dancer .d-head .d-face-bg { fill: currentColor; stroke: none; }
 .d-face { animation: face-in 0.4s ease; }
 @keyframes face-in { from { opacity: 0; } to { opacity: 1; } }
+=======
+>>>>>>> 8549007ca40d51bde9bc321df072eb0fd81c4a71
