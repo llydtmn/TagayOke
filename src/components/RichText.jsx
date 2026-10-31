@@ -3,14 +3,14 @@ import '../styles/rich.css';
 
 // Tiny, safe formatter for announcements (no HTML is ever injected):
 //   **bold**   [label](https://link)   and plain links (https://… or www.…) become clickable.
-const TOKEN = /\*\*(.+?)\*\*|\[([^\]\n]+)\]\(((?:https?:\/\/|www\.)[^\s)]+)\)|((?:https?:\/\/|www\.)[^\s<]+)/g;
+const TOKEN_SRC = /\*\*(.+?)\*\*|\[([^\]\n]+)\]\(((?:https?:\/\/|www\.)[^\s)]+)\)|((?:https?:\/\/|www\.)[^\s<]+)/;
 const TRAIL = /[.,!?;:'")\]]+$/;
 const href = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
 
 function parse(text, keyBase = 'r') {
   const out = [];
   let last = 0, n = 0, m;
-  TOKEN.lastIndex = 0;
+  const TOKEN = new RegExp(TOKEN_SRC.source, 'g'); // fresh regex per call: nested parse() must not reset the outer loop's position
   while ((m = TOKEN.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const key = `${keyBase}-${n++}`;
