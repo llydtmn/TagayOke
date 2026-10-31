@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import YouTubePlayer from './YouTubePlayer';
 import DemoStage from './DemoStage';
 import IdleTV from './IdleTV';
+import TvMessage from './TvMessage';
 import { formatLeft } from '../utils/hostCode';
 import Icon from './Icon';
 import { api } from '../services';
@@ -138,7 +139,7 @@ function ReservedBar({ item, upNext, mode, left }) {
   );
 }
 
-export default function Stage({ item, roomCode, onEnded, upNext = [], left = null, timeUp = null, startAt = 0, onPosition }) {
+export default function Stage({ item, roomCode, onEnded, upNext = [], left = null, timeUp = null, startAt = 0, onPosition, tvMessage = null }) {
   const screen = useRef(null);
   const [isFs, setIsFs] = useState(() => !!fsElement()); // may already be in full screen when this screen opens
   const [mode, setMode] = useState('queue'); // 'queue' | 'current' | 'next'
@@ -183,6 +184,7 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
           </div>
         )}
         <TimeReminder left={left} />
+        <TvMessage message={tvMessage} />
         {timeUp && <TimeUpPanel timeUp={timeUp} />}
       </div>
     );
@@ -196,6 +198,7 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
           : <DemoStage key={item.id} song={song} onEnded={onEnded} onProgress={onProgress} startAt={startAt} />}
         {isFs && <ReservedBar item={item} upNext={upNext} mode={mode} left={left} />}
         <TimeReminder left={left} />
+        <TvMessage message={tvMessage} />
         {timeUp && <TimeUpPanel timeUp={timeUp} />}
       </div>
       <div className="now">

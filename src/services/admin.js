@@ -5,6 +5,7 @@ import { SEED_SONGS } from '../data/seedSongs';
 import { makeRoomCode } from '../utils/roomCode';
 import { PEOPLE_KEY } from './presence';
 import { makeAccessCode } from '../utils/hostCode';
+import { api } from './index';
 
 export const DEMO = USE_MOCK;
 const ROOMS_KEY = 'tagayoke:mock'; // same store the demo adapter uses
@@ -265,3 +266,69 @@ export async function importSongs(rows, onProgress) {
   }
   return { added, skipped };
 }
+
+// ---- session control: look into one running room and act on it ----
+const NO_RIGHTS = 'The database refused this change. Run supabase/session-control.sql once in the Supabase SQL editor, then try again.';
+const isMissingFn = (e) => !!e && (e.code === 'PGRST202' || /could not find the function/i.test(e.message || ''));
+const shapeItem = (r) => ({ id: r.id, singer: r.singer, status: r.status, song: { code: r.song?.code, title: r.song?.title || 'Unknown song', artist: r.song?.artist || '' } });
+
+// The queue (now playing + waiting) and the message currently on the TV for one room.
+export async function loadRoomQueue(code) {
+  if (DEMO) {
+    const r = loadRooms()[code];
+    return {
+      items: (r?.queue || []).map(shapeItem),
+      message: r?.tv_message ? { text: r.tv_message, until: r.tv_message_until } : null,
+      messagesReady: true,
+    };
+  }
+  const [q, r] = await Promise.all([
+    supabase.from('queue_items').select('id, singer, status, created_at, song:songs(code, title, artist)')
+      .eq('room_code', code).neq('status', 'done').order('created_at'),
+    supabase.from('rooms').select('tv_message, tv_message_until').eq('code', code).maybeSingle(),
+  ]);
+  return {
+    items: check(q).map(shapeItem),
+    message: !r.error && r.data?.tv_message ? { text: r.data.tv_message, until: r.data.tv_message_until } : null,
+    messagesReady: !r.error, // false until session-control.sql has been run
+  };
+}
+
+// Ends the song that is playing and starts the next one.
+export async function skipSong(code) {
+  if (DEMO) return api.advance(code);
+  const q = check(await supabase.from('queue_items').select('id, status').eq('room_code', code).neq('status', 'done').order('created_at'));
+  const playing = q.find((i) => i.status === 'playing');
+  const next = q.find((i) => i.status === 'queued');
+  if (playing) {
+    const done = check(await supabase.from('queue_items').update({ status: 'done' }).eq('id', playing.id).select('id'));
+    if (!done.length) throw new Error(NO_RIGHTS);
+  }
+  if (next) check(await supabase.from('queue_items').update({ status: 'playing' }).eq('id', next.id).select('id'));
+}
+
+export async function removeQueueItem(code, id) {
+  if (DEMO) return api.removeItem(code, id);
+  const gone = check(await supabase.from('queue_items').delete().eq('id', id).select('id'));
+  if (!gone.length) throw new Error(NO_RIGHTS);
+}
+
+// Shows a short message on the host's TV for `seconds`. Empty text clears it.
+export async function sendTvMessage(code, text, seconds = 20) {
+  const t = (text || '').trim().slice(0, 120);
+  if (DEMO) {
+    const db = loadRooms();
+    if (!db[code]) throw new Error('That room has already closed.');
+    if (!t) { delete db[code].tv_message; delete db[code].tv_message_until; delete db[code].tv_message_at; }
+    else {
+      db[code].tv_message = t;
+      db[code].tv_message_until = new Date(Date.now() + seconds * 1000).toISOString();
+      db[code].tv_message_at = new Date().toISOString();
+    }
+    saveRooms(db);
+    return;
+  }
+  const { error } = await supabase.rpc('send_tv_message', { p_room: code, p_text: t, p_seconds: seconds });
+  if (error) throw new Error(isMissingFn(error) ? NO_RIGHTS : error.message);
+}
+export const clearTvMessage = (code) => sendTvMessage(code, '');

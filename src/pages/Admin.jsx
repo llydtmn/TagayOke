@@ -153,6 +153,100 @@ function Users({ code, users, live, act }) {
   );
 }
 
+const TV_PRESETS = ['Last song, please wrap up!', 'Please keep the volume down', 'Happy birthday! 🎂', 'Session ends in 10 minutes'];
+const TV_SECONDS = [[10, '10 seconds'], [20, '20 seconds'], [30, '30 seconds'], [60, '1 minute']];
+
+// Control one running host: see what is playing, skip or remove songs, remove users, put a message on the TV.
+function Control({ room, users, live, act, setErr }) {
+  const code = room.code;
+  const [state, setState] = useState(null);   // { items, message, messagesReady }
+  const [text, setText] = useState('');
+  const [secs, setSecs] = useState(20);
+  const [note, setNote] = useState('');
+  const load = useCallback(() => admin.loadRoomQueue(code).then(setState).catch((e) => setErr(e.message || String(e))), [code, setErr]);
+  useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, [load]);
+
+  const flash = (t) => { setNote(t); setTimeout(() => setNote(''), 2500); };
+  const go = async (fn, ...a) => { await act(fn)(...a); await load(); };
+  const send = async (e) => {
+    e.preventDefault();
+    const t = text.trim();
+    if (!t) return;
+    setErr('');
+    try { await admin.sendTvMessage(code, t, Number(secs)); setText(''); flash('Sent to the TV.'); await load(); } catch (x) { setErr(x.message || String(x)); }
+  };
+  const clear = async () => {
+    setErr('');
+    try { await admin.clearTvMessage(code); flash('Cleared from the TV.'); await load(); } catch (x) { setErr(x.message || String(x)); }
+  };
+
+  const items = state ? state.items : [];
+  const playing = items.find((i) => i.status === 'playing');
+  const queued = items.filter((i) => i.status === 'queued');
+  const msg = state && state.message;
+  const onTv = msg && msg.until && new Date(msg.until).getTime() > Date.now();
+
+  return (
+    <div className="ad-ctl">
+      <section className="ad-ctl-card">
+        <h4 className="ad-ctl-h">Now playing</h4>
+        {!state ? <p className="ad-dim">Loading…</p> : playing ? (
+          <div className="ad-ctl-now">
+            <span className="ad-chipno">#{playing.song.code}</span>
+            <div className="ad-ctl-grow"><b>{playing.song.title}</b><small className="ad-dim">{playing.song.artist ? `${playing.song.artist} · ` : ''}sung by {playing.singer}</small></div>
+            <button className="ad-btn danger small" onClick={() => window.confirm(`Skip "${playing.song.title}" on the TV now?`) && go(admin.skipSong, code)}>Skip song</button>
+          </div>
+        ) : <p className="ad-dim">Nothing is playing{queued.length ? '. The next song starts by itself.' : '.'}</p>}
+      </section>
+
+      <section className="ad-ctl-card">
+        <h4 className="ad-ctl-h">Up next <span className="ad-chipno">{queued.length}</span></h4>
+        {!state ? <p className="ad-dim">Loading…</p> : !queued.length ? <p className="ad-dim">The queue is empty.</p> : (
+          <ol className="ad-ctl-queue">
+            {queued.map((i, n) => (
+              <li key={i.id}>
+                <span className="ad-ctl-pos">{n + 1}</span>
+                <div className="ad-ctl-grow"><b>{i.song.title}</b><small className="ad-dim">#{i.song.code} · {i.singer}</small></div>
+                <button className="ad-link danger" onClick={() => go(admin.removeQueueItem, code, i.id)}>Remove</button>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <section className="ad-ctl-card">
+        <h4 className="ad-ctl-h"><Icon name="megaphone" size={18} /> Message to the TV</h4>
+        {state && !state.messagesReady && <p className="ad-dim">TV messages are not switched on yet. Run <code>supabase/session-control.sql</code> once in Supabase.</p>}
+        <div className="ad-chips">
+          {TV_PRESETS.map((t) => <button key={t} type="button" className="ad-chipbtn" onClick={() => setText(t)}>{t}</button>)}
+        </div>
+        <form className="ad-ctl-msg" onSubmit={send}>
+          <input value={text} onChange={(e) => setText(e.target.value)} maxLength={120} placeholder="Short message for the TV" aria-label="Message for the TV" />
+          <div className="ad-row">
+            <select value={secs} onChange={(e) => setSecs(e.target.value)} aria-label="How long to show it">
+              {TV_SECONDS.map(([s, t]) => <option key={s} value={s}>Show for {t}</option>)}
+            </select>
+            <button className="ad-btn small" disabled={!text.trim()}>Send to TV</button>
+            {note && <span className="ad-dim" role="status">{note}</span>}
+          </div>
+        </form>
+        {onTv && (
+          <div className="ad-ontv">
+            <span>On the TV now: <b>“{msg.text}”</b> (<TimeLeft expiresAt={msg.until} />)</span>
+            <button className="ad-link danger" onClick={clear}>Clear now</button>
+          </div>
+        )}
+        <small className="ad-dim">Up to 120 characters. It appears over the video, also in full screen.</small>
+      </section>
+
+      <section className="ad-ctl-card">
+        <h4 className="ad-ctl-h">Users <span className="ad-chipno">{users.length}</span></h4>
+        <Users code={code} users={users} live={live} act={act} />
+      </section>
+    </div>
+  );
+}
+
 function Hosts({ data, act, filter, setErr }) {
   const [name, setName] = useState('');
   const [minutes, setMinutes] = useState(0);  // 0 = unlimited
@@ -217,11 +311,11 @@ function Hosts({ data, act, filter, setErr }) {
                   <div className="ad-actions">
                     <button className="ad-btn ghost small" title="Add 30 minutes" onClick={() => act(admin.extendRoom)(r.code, 30, r.expires_at)}>+30m</button>
                     <button className="ad-btn ghost small" title="Add 1 hour" onClick={() => act(admin.extendRoom)(r.code, 60, r.expires_at)}>+1h</button>
-                    <button className="ad-btn ghost small" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Hide users' : 'Users'}</button>
+                    <button className="ad-btn ghost small" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Hide' : 'Control'}</button>
                     <button className="ad-btn danger small" onClick={() => window.confirm(`End host ${r.code} now? This closes the room and removes its queue and users.`) && act(admin.deleteRoom)(r.code)}>End now</button>
                   </div>
                 </li>
-                {open === r.code && <li className="ad-item-sub"><Users code={r.code} users={users} live={live} act={act} /></li>}
+                {open === r.code && <li className="ad-item-sub"><Control room={r} users={users} live={live} act={act} setErr={setErr} /></li>}
               </Fragment>
             );
           })}
@@ -547,7 +641,7 @@ const NAV = [
   ['settings', 'Settings', 'gear'],
 ];
 const PANEL = {
-  hosts: ['Live hosts', 'Rooms running right now'],
+  hosts: ['Live hosts', 'Rooms running right now. Press Control to manage one'],
   codes: ['Access codes', 'Codes that let someone start hosting'],
   songs: ['Song catalog', 'Add, edit, import and check songs'],
   history: ['Session history', 'Every hosted session, even after it ended'],

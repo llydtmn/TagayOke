@@ -344,3 +344,26 @@ td.ad-actions .ad-btn + .ad-btn { margin-left: .4rem; }
 @media (prefers-reduced-motion: reduce) {
   .ad-btn, .ad-stat, .ad-table tbody tr { transition: none; transform: none !important; }
 }
+
+/* ---------- session control (one running host) ---------- */
+.ad-item-sub:has(.ad-ctl) { padding: .8rem; }
+.ad-ctl { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: .9rem; }
+.ad-ctl-card { background: var(--ad-card); border: 1px solid var(--ad-line); border-radius: 12px; padding: .9rem 1rem; min-width: 0; }
+.ad-ctl-h { margin: 0 0 .6rem; display: flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-size: 1rem; color: var(--ad-text); }
+.ad-chipno { display: inline-flex; align-items: center; background: var(--ad-pink-tint); color: var(--ad-pink-ink); border-radius: 8px; padding: .05rem .5rem; font-family: var(--font-display); font-weight: 800; font-size: .85rem; }
+.ad-ctl-now { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.ad-ctl-grow { flex: 1 1 8rem; min-width: 0; display: grid; }
+.ad-ctl-grow b, .ad-ctl-grow small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-ctl-queue { list-style: none; margin: 0; padding: 0; display: grid; }
+.ad-ctl-queue li { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-top: 1px solid var(--ad-line); }
+.ad-ctl-queue li:first-child { border-top: 0; }
+.ad-ctl-pos { flex: none; width: 1.4rem; text-align: center; font-weight: 700; color: #8f97c4; }
+.ad-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+.ad-chipbtn { min-height: 0; cursor: pointer; border: 1.5px solid rgba(20,26,61,.18); background: #fff; color: var(--ad-text); border-radius: 999px; padding: .25rem .7rem; font: inherit; font-size: .82rem; font-weight: 600; }
+.ad-chipbtn:hover { background: var(--ad-soft); }
+.ad-ctl-msg { display: grid; gap: .5rem; }
+.ad-ctl-msg .ad-row { margin-bottom: 0; }
+.ad-ctl-msg .ad-row input, .ad-ctl-msg .ad-row select { flex: 0 1 auto; min-width: 0; }
+.ad-ontv { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin: .6rem 0; padding: .5rem .7rem; background: var(--ad-yellow-tint); border-radius: 10px; font-size: .9rem; }
+.ad-ctl-card code { background: var(--ad-soft); padding: .05rem .35rem; border-radius: 6px; }
+@media (max-width: 700px) { .ad-ctl { grid-template-columns: minmax(0, 1fr); } }

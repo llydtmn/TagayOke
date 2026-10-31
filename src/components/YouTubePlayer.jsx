@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import { useMediaKeys } from '../hooks/useMediaKeys';
 
-// YouTube end screens (the suggestion cards) are drawn inside the player and cannot be removed from our side.
-// So: (1) move to the next song this many seconds before the video ends, and
-// (2) cover the player with a clear shield for the last stretch so a click can't open a suggestion.
-// Raise END_TRIM_SECONDS (up to about 20) if an uploader's cards still appear; lower it to keep more of the outro.
-const END_TRIM_SECONDS = 20; // uploaders' end-screen suggestion cards usually show for the last 5 to 20 seconds
+// Songs play to the very end: the next song starts only when YouTube reports that the video has ended,
+// so the last lyrics are never cut off. YouTube's end-screen suggestion cards may show in the last seconds;
+// the clear shield over the player (see yt-shield) stops anyone from clicking them.
 
 let ytReady;
 const loadYT = () => {
@@ -20,7 +18,7 @@ const loadYT = () => {
 };
 
 // Official IFrame Player only. Errors (removed or non-embeddable video) skip to the next song.
-// onProgress(currentSeconds, usableSeconds) is called about 4 times a second (drives the fullscreen top bar).
+// onProgress(currentSeconds, totalSeconds) is called about 4 times a second (drives the fullscreen top bar).
 export default function YouTubePlayer({ videoId, onEnded, onProgress, onVideoError, startAt = 0 }) {
   const host = useRef(null);
   const cb = useRef(onEnded);
@@ -62,14 +60,13 @@ export default function YouTubePlayer({ videoId, onEnded, onProgress, onVideoErr
       cb.current();
     };
 
+    // Only reports progress (for the fullscreen top bar). It never ends the song: that happens on the ENDED event below.
     const tick = () => {
       if (!player?.getDuration) return;
       const total = player.getDuration();
       const now = player.getCurrentTime();
-      if (!total || !now || total < END_TRIM_SECONDS * 3) return; // skip live streams and very short clips
-      const left = total - now;
-      progressCb.current?.(now, total - END_TRIM_SECONDS);
-      if (left <= END_TRIM_SECONDS) finish();
+      if (!total || !now) return; // not started yet, or a live stream
+      progressCb.current?.(now, total);
     };
 
     // Captions (auto-generated "[Music]" text etc.) are switched off. The setting can load after playback starts, so this runs on ready and on play.

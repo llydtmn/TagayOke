@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../services';
 import { useQueue } from '../hooks/useQueue';
 import { useSessionClock } from '../hooks/useSessionClock';
+import { useTvMessage } from '../hooks/useTvMessage';
 import SessionTimer from '../components/SessionTimer';
 import { joinUrl } from '../utils/roomCode';
 import { accessKey } from '../utils/hostCode';
@@ -35,6 +36,7 @@ function HostRoom({ code }) {
     };
   }, []);
   const { nowPlaying, upNext, remove, advance, error } = useQueue(code);
+  const tvMessage = useTvMessage(code); // short message an admin sends from the dashboard
 
   // Playback position of the current song, kept up to date by the player (seconds).
   const pos = useRef(0);
@@ -101,7 +103,7 @@ function HostRoom({ code }) {
   return (
     <main className={`host${fs ? ' host-fs' : ''}`}>
       <div className="host-main">
-        <Stage item={nowPlaying} roomCode={code} onEnded={advance} upNext={upNext} left={left} startAt={startAt} onPosition={(t) => { pos.current = t; }}
+        <Stage item={nowPlaying} roomCode={code} onEnded={advance} upNext={upNext} left={left} startAt={startAt} tvMessage={tvMessage} onPosition={(t) => { pos.current = t; }}
           timeUp={timeUp && { remaining: timeUp.remaining, onContinue: continueSession, onEnd: finishExpired, busy, error: timeErr }} />
         <div className="host-bar">
           <SessionTimer left={left} />

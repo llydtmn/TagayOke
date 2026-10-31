@@ -407,9 +407,13 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   display: grid;
   place-items: center;
   /* same photo as the start page, with the same blue tint over it */
-  background:
-    linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
-    url("/boli-fam.jpg") center / cover no-repeat;
+  background-color: #0a1650;
+  background-image:
+    linear-gradient(rgba(10, 22, 80, 0.2), rgba(10, 22, 80, 0.2)),
+    url("/boli-fam.jpg");
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
   box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.65);
   isolation: isolate;
 }
@@ -699,13 +703,25 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .host::before {
   content: "";
   position: fixed;
-  inset: 0;
-  z-index: -1;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 0;
   pointer-events: none;
-  background:
-    linear-gradient(rgba(6, 10, 40, 0.6), rgba(6, 10, 40, 0.84)),
-    url("/boli-fam.jpg") center / 100% 100% no-repeat;
+  background-color: #080e38;
+  background-image:
+    linear-gradient(rgba(6, 10, 40, 0.18), rgba(6, 10, 40, 0.38)),
+    url("/boli-fam.jpg");
+  background-position: center center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
+
+/* keep page content above the photo layer */
+.landing > *, .host > * { position: relative; z-index: 1; }
+.landing > .admin-secret { position: fixed; }
+.landing > .announce { position: absolute; }
+
+/* keep small text readable over the lighter photo */
+.landing .lede, .landing .fine, .landing .tagline { text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
 /* ---- Fullscreen: reserved-songs bar across the top, like a traditional videoke ---- */
 .stage-screen { position: relative; }
 
@@ -1105,29 +1121,46 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   .yt-paused p { font-size: 2.2rem; }
 }
 
-/* ---- restore boli-fam.jpg backgrounds ---- */
-.landing::before,
-.host::before {
-  content: "";
-  position: fixed;
-  top: 0; right: 0; bottom: 0; left: 0;
-  z-index: -1;
+/* ---- Message from the admin, shown over the TV (inside the stage box, so it also shows in full screen) ---- */
+.stage.idle { position: relative; }
+.tv-message {
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: max-content;
+  max-width: 88%;
+  padding: 0.9rem 1.6rem;
+  background: var(--pink-strong);
+  color: #fff;
+  border: 3px solid var(--yellow);
+  border-radius: 1.2rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  text-align: left;
   pointer-events: none;
-  background-color: #080e38;
-  background-image:
-    linear-gradient(rgba(6, 10, 40, 0.6), rgba(6, 10, 40, 0.84)),
-    url("/boli-fam.jpg");
-  background-position: center center;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  animation: tvmsg-in 0.4s ease;
+}
+.tv-message-icon { flex: none; font-size: 2.4rem; line-height: 1; }
+.tv-message-text {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  font-size: clamp(1.2rem, 3vw, 3.4rem); /* old TV browsers skip this line and keep 1.6rem */
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+@keyframes tvmsg-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%); }
 }
 
-.tv-screen {
-  background-color: #0a1650;
-  background-image:
-    linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
-    url("/boli-fam.jpg");
-  background-position: center center;
-  background-size: cover;
-  background-repeat: no-repeat;
-}
+/* ---- Dancer heads wear faces (see IdleTV.jsx): a ring in the dancer's colour, a soft fade when the face changes ---- */
+.dancer .d-head .d-face-ring { fill: none; stroke: currentColor; stroke-width: 5; }
+.dancer .d-head .d-face-bg { fill: currentColor; stroke: none; }
+.d-face { animation: face-in 0.4s ease; }
+@keyframes face-in { from { opacity: 0; } to { opacity: 1; } }

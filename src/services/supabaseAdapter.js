@@ -125,3 +125,12 @@ export async function advance(code) {
 export async function reportSong(songId, reason = 'broken') {
   try { await supabase.rpc('report_song', { p_song_id: String(songId), p_reason: reason }); } catch { /* ignore */ }
 }
+
+// The message an admin sent to this room's TV, or null. Needs supabase/session-control.sql; without it the TV just shows nothing.
+export async function getTvMessage(code) {
+  const { data, error } = await supabase.rpc('room_tv_message', { p_code: code });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || !row.out_text) return null;
+  return { text: row.out_text, key: row.out_at, left: Number(row.out_left) || 0 };
+}

@@ -137,3 +137,11 @@ export async function advance(code) {
 }
 
 export async function reportSong() { /* demo mode has no catalog to fix */ }
+
+// The message an admin sent to this room's TV (demo mode: stored in the room by the admin page).
+export async function getTvMessage(code) {
+  const r = load()[code];
+  if (!r || !r.tv_message || !r.tv_message_until) return null;
+  const left = Math.ceil((new Date(r.tv_message_until).getTime() - Date.now()) / 1000);
+  return left > 0 ? { text: r.tv_message, key: r.tv_message_at, left } : null;
+}

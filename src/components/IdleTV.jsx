@@ -1,9 +1,32 @@
+import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { joinUrl } from '../utils/roomCode';
 
+// Faces cut from the group photo (public/faces/f01.jpg ... f18.jpg). Shown in a fixed, mixed-up order.
+const FACE_COUNT = 18;
+const FACE_ORDER = [3, 12, 1, 17, 8, 14, 10, 6, 18, 2, 15, 7, 11, 5, 16, 9, 13, 4];
+const FACES = FACE_ORDER.map((n) => `/faces/f${String(n).padStart(2, '0')}.jpg`);
+const FACE_MS = 3000; // every dancer gets a different person's face this often
+
+// Index of the face a dancer wears now. `start` picks who comes first (the two dancers start half a list apart, so they
+// never wear the same face), `delay` staggers when each dancer changes.
+function useFace(start, delay) {
+  const [i, setI] = useState(start);
+  useEffect(() => {
+    FACES.forEach((src) => { const img = new Image(); img.src = src; }); // load all once, so a swap never flashes empty
+    let timer;
+    const next = () => setI((n) => (n + 1) % FACE_COUNT);
+    const first = setTimeout(() => { timer = setInterval(next, FACE_MS); }, delay);
+    return () => { clearTimeout(first); clearInterval(timer); };
+  }, [delay]);
+  return FACES[i];
+}
+
 // A little stick-figure singer. Every limb is a nested group that rotates around its own joint.
-function Dancer({ className = '', mic = false }) {
+function Dancer({ className = '', mic = false, flip = false, start = 0, delay = 0 }) {
   const o = (x, y) => ({ transformOrigin: `${x}px ${y}px` });
+  const face = useFace(start, delay);
+  const clipId = `face-clip-${className || 'x'}`;
   return (
     <svg className={`dancer ${className}`} viewBox="0 0 200 290" aria-hidden="true" focusable="false">
       <g className="d-body" style={o(100, 150)}>
@@ -36,7 +59,14 @@ function Dancer({ className = '', mic = false }) {
           </g>
         </g>
         <g className="d-head" style={o(100, 72)}>
-          <circle cx="100" cy="46" r="23" />
+          <defs><clipPath id={clipId}><circle cx="100" cy="44" r="37" /></clipPath></defs>
+          <circle className="d-face-bg" cx="100" cy="44" r="37" />
+          {/* the right dancer is mirrored by CSS, so its face is flipped back to look the right way round */}
+          <g transform={flip ? 'translate(200 0) scale(-1 1)' : undefined}>
+            <image key={face} className="d-face" href={face} xlinkHref={face} x="63" y="7" width="74" height="74"
+              preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clipId})`} />
+          </g>
+          <circle className="d-face-ring" cx="100" cy="44" r="37" />
         </g>
       </g>
     </svg>
@@ -66,8 +96,8 @@ export default function IdleTV({ roomCode }) {
             <span key={i} className="tv-note" aria-hidden="true"
               style={{ left: x.x, animationDelay: x.d, fontSize: x.s }}>{x.n}</span>
           ))}
-          <Dancer className="left" mic />
-          <Dancer className="right" />
+          <Dancer className="left" mic start={0} delay={0} />
+          <Dancer className="right" flip start={9} delay={1500} />
           <div className="tv-content">
             <p className="lyric">Walang kumakanta pa.</p>
             <p className="tv-hint">
