@@ -36,3 +36,38 @@
   .ad-toolbar { align-items: stretch; }
   .ad-dup li { align-items: flex-start; }
 }
+
+/* Confirm dialog, undo toasts and the activity log. */
+/* The dialog is drawn outside .ad-shell, so it needs its own copy of the light-panel tokens. */
+.ad-modal-back {
+  --ad-text: #141a3d; --ad-sub: #5b6490; --ad-line: rgba(20, 26, 61, .1); --ad-soft: #eef0fb;
+  --ad-ring: 0 0 0 4px rgba(109, 76, 245, .22);
+  font-family: var(--font-body);
+}
+.ad-modal :focus-visible { outline-color: var(--brand); }
+.ad-modal input {
+  background: #fff; color: var(--ad-text); border: 1.5px solid rgba(20, 26, 61, .22); border-radius: 10px;
+  padding: .5rem .8rem; min-height: 2.5rem; font: inherit; min-width: 0; width: 100%;
+}
+.ad-modal input:focus-visible { outline: none; border-color: var(--brand); box-shadow: var(--ad-ring); }
+.ad-modal-back { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgba(20, 26, 61, .55); }
+.ad-modal { width: min(28rem, 100%); background: #fff; color: var(--ad-text); border-radius: 18px; padding: 1.2rem 1.3rem; box-shadow: 0 24px 60px rgba(8, 14, 56, .35); display: grid; gap: .8rem; }
+.ad-modal h3 { margin: 0; font-size: 1.15rem; color: var(--ad-text); }
+.ad-modal-body { display: grid; gap: .5rem; font-size: .95rem; }
+.ad-modal-body p { margin: 0; }
+.ad-modal-type { display: grid; gap: .35rem; font-size: .9rem; font-weight: 600; }
+.ad-modal-type input { text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
+.ad-modal-actions { justify-content: flex-end; }
+
+.ad-toasts { position: fixed; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 110; display: grid; gap: .5rem; width: min(26rem, calc(100% - 1.5rem)); pointer-events: none; }
+.ad-toast { pointer-events: auto; display: flex; align-items: center; gap: .6rem; background: #141a3d; color: #fff; border-radius: 12px; padding: .65rem .8rem; box-shadow: 0 10px 30px rgba(8, 14, 56, .35); font-size: .92rem; }
+.ad-toast > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ad-toast.bad { background: #8a1c2b; }
+.ad-toast-undo { min-height: 0; background: transparent; border: 0; color: #ffd84d; font: inherit; font-weight: 800; cursor: pointer; padding: .2rem .4rem; }
+.ad-toast-x { min-height: 0; background: transparent; border: 0; color: rgba(255, 255, 255, .7); font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0 .2rem; }
+
+.ad-logcard { margin-top: 1rem; }
+.ad-logtable td { vertical-align: top; }
+
+.ad-insight-grid { margin: 1rem 0; }
+.ad-insight-grid .ad-rsub { margin-top: 0; }

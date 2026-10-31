@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as admin from '../services/admin';
 import { getAnnouncement, saveAnnouncement } from '../services/settings';
@@ -108,6 +108,77 @@ function TimeLeft({ expiresAt }) {
 
 const copy = async (text) => { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } };
 
+// ---------- confirm dialog + undo toasts (shared by every section) ----------
+const UiCtx = createContext({ confirm: async () => false, toast: () => {} });
+const useUi = () => useContext(UiCtx);
+let toastSeq = 0;
+
+// Modal asking "are you sure?". With typeToConfirm the admin has to type that text before the red button works.
+function ConfirmDialog({ dlg, onClose }) {
+  const [typed, setTyped] = useState('');
+  const need = dlg.typeToConfirm ? String(dlg.typeToConfirm) : '';
+  const ok = !need || typed.trim().toLowerCase() === need.toLowerCase();
+  useEffect(() => {
+    const k = (e) => { if (e.key === 'Escape') onClose(false); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [onClose]);
+  return (
+    <div className="ad-modal-back" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(false); }}>
+      <form className="ad-modal" role="alertdialog" aria-modal="true" aria-labelledby="ad-dlg-title" aria-describedby="ad-dlg-body"
+        onSubmit={(e) => { e.preventDefault(); if (ok) onClose(true); }}>
+        <h3 id="ad-dlg-title">{dlg.title}</h3>
+        <div id="ad-dlg-body" className="ad-modal-body">{dlg.body}</div>
+        {need && (
+          <label className="ad-modal-type">
+            <span>Type <b className="ad-code small">{need}</b> to confirm</span>
+            <input value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus autoComplete="off" autoCapitalize="characters" spellCheck={false} />
+          </label>
+        )}
+        <div className="ad-row ad-modal-actions">
+          <button type="button" className="ad-btn ghost" onClick={() => onClose(false)} autoFocus={!need}>Cancel</button>
+          <button className="ad-btn danger" disabled={!ok}>{dlg.confirmLabel || 'Confirm'}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function UiProvider({ children }) {
+  const [dlg, setDlg] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const confirm = useCallback((opts) => new Promise((resolve) => setDlg({ ...opts, resolve })), []);
+  const close = useCallback((answer) => { setDlg((d) => { if (d) d.resolve(answer); return null; }); }, []);
+  const drop = useCallback((id) => setToasts((l) => l.filter((x) => x.id !== id)), []);
+  const toast = useCallback((text, opts = {}) => {
+    const id = ++toastSeq;
+    setToasts((l) => [...l.slice(-2), { id, text, ...opts }]);
+    setTimeout(() => drop(id), opts.undo ? 9000 : 4500);
+  }, [drop]);
+  const undo = async (t) => {
+    drop(t.id);
+    try {
+      const r = await t.undo();
+      if (r === false) toast('Could not undo. See the message at the top of the page.', { tone: 'bad' });
+    } catch (e) { toast(`Could not undo: ${e.message || e}`, { tone: 'bad' }); }
+  };
+  return (
+    <UiCtx.Provider value={{ confirm, toast }}>
+      {children}
+      {dlg && <ConfirmDialog dlg={dlg} onClose={close} />}
+      <div className="ad-toasts" role="status" aria-live="polite">
+        {toasts.map((t) => (
+          <div key={t.id} className={`ad-toast ${t.tone || ''}`}>
+            <span>{t.text}</span>
+            {t.undo && <button type="button" className="ad-toast-undo" onClick={() => undo(t)}>Undo</button>}
+            <button type="button" className="ad-toast-x" aria-label="Dismiss" onClick={() => drop(t.id)}>×</button>
+          </div>
+        ))}
+      </div>
+    </UiCtx.Provider>
+  );
+}
+
 function Login({ onDone }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -133,7 +204,14 @@ function Login({ onDone }) {
 }
 
 function Users({ code, users, live, act }) {
+  const ui = useUi();
   const [name, setName] = useState('');
+  const remove = async (u) => {
+    const label = `${u.name} (host ${code})`;
+    const snap = await admin.snapshotPerson(u.id).catch(() => null);
+    const ok = await act(admin.deletePerson)(u.id, label);
+    if (ok) ui.toast(`Removed ${u.name}`, snap ? { undo: () => act(admin.restorePerson)(snap, label) } : {});
+  };
   return (
     <div className="ad-users">
       {!users.length && <p className="ad-dim">No phones have joined this host yet.</p>}
@@ -142,7 +220,7 @@ function Users({ code, users, live, act }) {
           <span className={`ad-dot ${live(u) ? 'on' : ''}`} title={live(u) ? 'Active' : 'Away'} />
           <Editable value={u.name} onSave={(v) => (v ? act(admin.renamePerson)(u.id, v) : null)} />
           <span className="ad-dim">joined {ago(u.joined_at)} · seen {ago(u.last_seen)}</span>
-          <button className="ad-link danger" onClick={() => act(admin.deletePerson)(u.id)}>Remove</button>
+          <button className="ad-link danger" onClick={() => remove(u)}>Remove</button>
         </div>
       ))}
       <form className="ad-row" onSubmit={(e) => { e.preventDefault(); if (name.trim()) act(admin.addPerson)(code, name.trim()); setName(''); }}>
@@ -159,6 +237,7 @@ const TV_SECONDS = [[10, '10 seconds'], [20, '20 seconds'], [30, '30 seconds'], 
 // Control one running host: see what is playing, skip or remove songs, remove users, put a message on the TV.
 function Control({ room, users, live, act, setErr }) {
   const code = room.code;
+  const ui = useUi();
   const [state, setState] = useState(null);   // { items, message, messagesReady }
   const [text, setText] = useState('');
   const [secs, setSecs] = useState(20);
@@ -186,6 +265,23 @@ function Control({ room, users, live, act, setErr }) {
   const msg = state && state.message;
   const onTv = msg && msg.until && new Date(msg.until).getTime() > Date.now();
 
+  const skip = async () => {
+    if (!playing) return;
+    const ok = await ui.confirm({
+      title: 'Skip this song?',
+      body: <p>“{playing.song.title}” stops on the TV right now and the next song starts.</p>,
+      confirmLabel: 'Skip song',
+    });
+    if (ok) go(admin.skipSong, code, `${playing.song.title} · ${playing.singer}`);
+  };
+  const removeItem = async (i) => {
+    const label = `${i.song.title} · ${i.singer}`;
+    const snap = await admin.snapshotQueueItem(code, i.id).catch(() => null);
+    const ok = await act(admin.removeQueueItem)(code, i.id, label);
+    await load();
+    if (ok) ui.toast(`Removed “${i.song.title}”`, snap ? { undo: async () => { const r = await act(admin.restoreQueueItem)(code, snap, label); await load(); return r; } } : {});
+  };
+
   return (
     <div className="ad-ctl">
       <section className="ad-ctl-card">
@@ -194,7 +290,7 @@ function Control({ room, users, live, act, setErr }) {
           <div className="ad-ctl-now">
             <span className="ad-chipno">#{playing.song.code}</span>
             <div className="ad-ctl-grow"><b>{playing.song.title}</b><small className="ad-dim">{playing.song.artist ? `${playing.song.artist} · ` : ''}sung by {playing.singer}</small></div>
-            <button className="ad-btn danger small" onClick={() => window.confirm(`Skip "${playing.song.title}" on the TV now?`) && go(admin.skipSong, code)}>Skip song</button>
+            <button className="ad-btn danger small" onClick={skip}>Skip song</button>
           </div>
         ) : <p className="ad-dim">Nothing is playing{queued.length ? '. The next song starts by itself.' : '.'}</p>}
       </section>
@@ -207,7 +303,7 @@ function Control({ room, users, live, act, setErr }) {
               <li key={i.id}>
                 <span className="ad-ctl-pos">{n + 1}</span>
                 <div className="ad-ctl-grow"><b>{i.song.title}</b><small className="ad-dim">#{i.song.code} · {i.singer}</small></div>
-                <button className="ad-link danger" onClick={() => go(admin.removeQueueItem, code, i.id)}>Remove</button>
+                <button className="ad-link danger" onClick={() => removeItem(i)}>Remove</button>
               </li>
             ))}
           </ol>
@@ -248,6 +344,7 @@ function Control({ room, users, live, act, setErr }) {
 }
 
 function Hosts({ data, act, filter, setErr }) {
+  const ui = useUi();
   const [name, setName] = useState('');
   const [minutes, setMinutes] = useState(0);  // 0 = unlimited
   const [open, setOpen] = useState(null);
@@ -268,6 +365,21 @@ function Hosts({ data, act, filter, setErr }) {
   const live = (p) => now - new Date(p.last_seen).getTime() < ACTIVE_MS;
   const f = filter.trim().toLowerCase();
   const rooms = f ? data.rooms.filter((r) => `${r.code} ${r.name || ''}`.toLowerCase().includes(f)) : data.rooms;
+  const endHost = async (r, us) => {
+    const songs = queuedOf(r.code);
+    const ok = await ui.confirm({
+      title: `End host ${r.code}?`,
+      body: (
+        <>
+          <p>This closes {r.name ? `“${r.name}”` : 'this room'} right away and stops the TV.</p>
+          <p><b>{us.length}</b> user{us.length === 1 ? '' : 's'} and <b>{songs}</b> queued song{songs === 1 ? '' : 's'} will be removed. This cannot be undone.</p>
+        </>
+      ),
+      typeToConfirm: r.code,
+      confirmLabel: 'End host now',
+    });
+    if (ok) act(admin.deleteRoom)(r.code);
+  };
   return (
     <>
       <form className="ad-row" onSubmit={makeCode}>
@@ -312,7 +424,7 @@ function Hosts({ data, act, filter, setErr }) {
                     <button className="ad-btn ghost small" title="Add 30 minutes" onClick={() => act(admin.extendRoom)(r.code, 30, r.expires_at)}>+30m</button>
                     <button className="ad-btn ghost small" title="Add 1 hour" onClick={() => act(admin.extendRoom)(r.code, 60, r.expires_at)}>+1h</button>
                     <button className="ad-btn ghost small" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Hide' : 'Control'}</button>
-                    <button className="ad-btn danger small" onClick={() => window.confirm(`End host ${r.code} now? This closes the room and removes its queue and users.`) && act(admin.deleteRoom)(r.code)}>End now</button>
+                    <button className="ad-btn danger small" onClick={() => endHost(r, users)}>End now</button>
                   </div>
                 </li>
                 {open === r.code && <li className="ad-item-sub"><Control room={r} users={users} live={live} act={act} setErr={setErr} /></li>}
@@ -338,6 +450,7 @@ function codeStatus(c) {
 }
 
 function Codes({ setErr, filter }) {
+  const ui = useUi();
   const [rows, setRows] = useState([]);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('3');   // typed by the admin
@@ -349,6 +462,19 @@ function Codes({ setErr, filter }) {
   const load = useCallback(() => admin.listCodes().then(setRows).catch((e) => setErr(e.message || String(e))), [setErr]);
   useEffect(() => { load(); }, [load]);
   const run = async (fn) => { setErr(''); try { await fn(); await load(); } catch (e) { setErr(e.message || String(e)); } };
+  const removeCode = async (c) => {
+    const ok = await ui.confirm({
+      title: `Delete code ${c.code}?`,
+      body: (
+        <>
+          <p>{c.label ? `“${c.label}”` : 'This code'} disappears from the list and can no longer be used.</p>
+          <p>Sessions already running keep going until their time is up. Choose Revoke instead if you may want the code back.</p>
+        </>
+      ),
+      confirmLabel: 'Delete code',
+    });
+    if (ok) run(() => admin.deleteCode(c.id, c.code));
+  };
   const flashCopy = async (code) => { if (await copy(code)) { setCopied(code); setTimeout(() => setCopied(''), 1500); } };
   const f = filter.trim().toLowerCase();
   const shown = f ? rows.filter((c) => `${c.code} ${c.label || ''}`.toLowerCase().includes(f)) : rows;
@@ -401,8 +527,8 @@ function Codes({ setErr, filter }) {
                   <td data-label="Created">{ago(c.created_at)}</td>
                   <td className="ad-actions">
                     <button className="ad-btn ghost small" onClick={() => flashCopy(c.code)}>{copied === c.code ? 'Copied' : 'Copy'}</button>
-                    <button className="ad-btn ghost small" onClick={() => run(() => admin.setCodeRevoked(c.id, !c.revoked))}>{c.revoked ? 'Restore' : 'Revoke'}</button>
-                    <button className="ad-btn danger small" onClick={() => window.confirm(`Delete code ${c.code}? Sessions already running keep going until their time is up.`) && run(() => admin.deleteCode(c.id))}>Delete</button>
+                    <button className="ad-btn ghost small" onClick={() => run(() => admin.setCodeRevoked(c.id, !c.revoked, c.code))}>{c.revoked ? 'Restore' : 'Revoke'}</button>
+                    <button className="ad-btn danger small" onClick={() => removeCode(c)}>Delete</button>
                   </td>
                 </tr>
               );
@@ -438,10 +564,10 @@ function Bars({ rows, empty = 'Nothing to show yet.' }) {
 }
 
 // Column chart for a daily series.
-function Columns({ days }) {
+function Columns({ days, label = 'Access codes created per day' }) {
   const max = Math.max(1, ...days.map((d) => d.value));
   return (
-    <div className="ad-cols" role="img" aria-label="Access codes created per day">
+    <div className="ad-cols" role="img" aria-label={label} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
       {days.map((d) => (
         <div key={d.key} className="ad-col" title={`${d.label}: ${d.value}`}>
           <b>{d.value || ''}</b>
@@ -450,6 +576,73 @@ function Columns({ days }) {
         </div>
       ))}
     </div>
+  );
+}
+
+const hourName = (h) => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`;
+const hourShort = (h) => `${((h + 11) % 12) + 1}${h < 12 ? 'a' : 'p'}`;
+const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DOW_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const INSIGHT_RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days'], [0, 'All time']];
+
+// What people actually sing and when. Numbers come from one database call (admin_insights), so this never downloads raw rows.
+function Insights({ setErr }) {
+  const [days, setDays] = useState(30);
+  const [r, setR] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    setR(null);
+    admin.loadInsights(days).then((x) => alive && setR(x)).catch((e) => alive && setErr(e.message || String(e)));
+    return () => { alive = false; };
+  }, [days, setErr]);
+
+  const head = (
+    <div className="ad-rhead">
+      <h3><Icon name="mic" size={18} /> Karaoke insights</h3>
+      <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Insights time range">
+        {INSIGHT_RANGES.map(([d, t]) => <option key={d} value={d}>{t}</option>)}
+      </select>
+    </div>
+  );
+  if (admin.DEMO) return <section className="ad-rcard">{head}<p className="ad-dim">Insights are recorded in Supabase. Connect it to see them here.</p></section>;
+  if (!r) return <section className="ad-rcard">{head}<p className="ad-dim">Loading…</p></section>;
+  if (r.missing) return <section className="ad-rcard">{head}<p className="ad-notice">Insights are not set up yet. Run <code>supabase/session-insights.sql</code> once in the Supabase SQL editor, then reload this page. Songs are counted from that moment on.</p></section>;
+  if (!r.songs_requested) return <section className="ad-rcard">{head}<p className="ad-dim">No songs recorded in this range yet. Every song a singer queues from now on is counted here, even after the session ends.</p></section>;
+
+  const perSession = r.sessions_with_songs ? (r.songs_sung / r.sessions_with_songs).toFixed(1) : '—';
+  const topHour = r.by_hour.indexOf(Math.max(...r.by_hour));
+  const topDow = r.by_dow.indexOf(Math.max(...r.by_dow));
+  const hours = r.by_hour.map((v, h) => ({ key: String(h), value: v, label: `${hourName(h)}: ${v} song${v === 1 ? '' : 's'}`, short: h % 3 === 0 ? hourShort(h) : '' }));
+
+  return (
+    <section className="ad-rcard">
+      {head}
+      <div className="ad-kpis">
+        <div className="ad-kpi"><b>{r.songs_sung}</b><span>Songs sung ({r.songs_requested} requested)</span></div>
+        <div className="ad-kpi"><b>{perSession}</b><span>Songs per session</span></div>
+        <div className="ad-kpi"><b>{r.peak_users_max || '—'}</b><span>Most phones at once{r.peak_users_avg ? ` (avg peak ${r.peak_users_avg})` : ''}</span></div>
+        <div className="ad-kpi"><b>{r.by_hour[topHour] ? hourName(topHour) : '—'}</b><span>Busiest hour{r.by_dow[topDow] ? ` · ${DOW_LONG[topDow]}s are busiest` : ''}</span></div>
+      </div>
+
+      <div className="ad-rgrid ad-insight-grid">
+        <div>
+          <h4 className="ad-rsub">Most requested songs</h4>
+          <Bars rows={r.top_songs.map((s) => ({ label: `#${s.code ?? '?'} ${s.title || 'Unknown'}${s.artist ? ` · ${s.artist}` : ''}`, value: s.requested }))} empty="No songs yet." />
+        </div>
+        <div>
+          <h4 className="ad-rsub">Top singers (songs sung)</h4>
+          <Bars rows={r.top_singers.map((s) => ({ label: s.singer, value: s.sung, tone: 'pink' }))} empty="No singers yet." />
+        </div>
+        <div>
+          <h4 className="ad-rsub">Songs by day of the week</h4>
+          <Bars rows={DOW_SHORT.map((d, i) => ({ label: d, value: r.by_dow[i] || 0 }))} />
+        </div>
+      </div>
+
+      <h4 className="ad-rsub">Songs by hour of the day</h4>
+      <Columns days={hours} label="Songs sung by hour of the day" />
+      <p className="ad-dim">Times are in your browser's time zone. A song counts when it starts playing; "requested" also includes songs that were removed or never reached.</p>
+    </section>
   );
 }
 
@@ -559,6 +752,8 @@ function Reports({ data, setErr }) {
         </section>
       </div>
 
+      <Insights setErr={setErr} />
+
       <div className="ad-row ad-rfoot">
         <button className="ad-btn ghost small" onClick={exportCsv} disabled={!codes.length}><Icon name="download" size={16} />Export access codes (CSV)</button>
         <span className="ad-dim">Hosts and their queues are removed when a session ends, so live figures only show what is running now. Session history comes from access codes.</span>
@@ -628,7 +823,46 @@ function Settings({ setErr }) {
           {!visible && message.trim() && <p className="ad-dim ad-prev-note">Hidden: guests do not see this yet.</p>}
         </div>
       </section>
+      <ActivityLog setErr={setErr} />
     </div>
+  );
+}
+
+// ---------- who did what ----------
+const ACTION_LABEL = {
+  end_host: 'Ended a host', create_code: 'Created a code', revoke_code: 'Revoked a code', restore_code: 'Restored a code', delete_code: 'Deleted a code',
+  remove_user: 'Removed a user', restore_user: 'Brought a user back', remove_song: 'Removed a queued song', restore_song: 'Brought a song back',
+  skip_song: 'Skipped a song', tv_message: 'Sent a TV message', tv_clear: 'Cleared the TV message', delete_catalog_song: 'Deleted from the catalog',
+};
+const stamp = (iso) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+function ActivityLog({ setErr }) {
+  const [log, setLog] = useState(null);
+  const load = useCallback(() => admin.listLog(50).then(setLog).catch((e) => setErr(e.message || String(e))), [setErr]);
+  useEffect(() => { load(); }, [load]);
+  return (
+    <section className="ad-rcard ad-logcard">
+      <div className="ad-rhead"><h3><Icon name="list" size={18} /> Admin activity</h3><button type="button" className="ad-link" onClick={load}>Refresh</button></div>
+      {!log ? <p className="ad-dim">Loading…</p> : log.missing ? (
+        <p className="ad-notice">The activity log is not set up yet. Run <code>supabase/admin-log.sql</code> once in the Supabase SQL editor, then refresh.</p>
+      ) : !log.rows.length ? <p className="ad-dim">Nothing yet. Ending hosts, deleting codes, removing users and similar actions will appear here.</p> : (
+        <div className="ad-scroll">
+          <table className="ad-table ad-logtable">
+            <thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th></tr></thead>
+            <tbody>
+              {log.rows.map((r) => (
+                <tr key={r.id}>
+                  <td data-label="When">{stamp(r.at)}</td>
+                  <td data-label="Who">{r.admin_email || <span className="ad-dim">—</span>}</td>
+                  <td data-label="What">{ACTION_LABEL[r.action] || r.action}</td>
+                  <td data-label="Details">{[r.target, r.detail].filter(Boolean).join(' · ') || <span className="ad-dim">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -658,7 +892,7 @@ function Dashboard({ onSignOut }) {
   const [search, setSearch] = useState('');
   const refresh = useCallback(() => admin.loadOverview().then(setData).catch((e) => setErr(e.message)), []);
   useEffect(() => { refresh(); const t = setInterval(refresh, 5000); return () => clearInterval(t); }, [refresh]);
-  const act = (fn) => async (...a) => { setErr(''); try { await fn(...a); await refresh(); } catch (e) { setErr(e.message || String(e)); } };
+  const act = (fn) => async (...a) => { setErr(''); try { await fn(...a); await refresh(); return true; } catch (e) { setErr(e.message || String(e)); return false; } };
   const go = (t) => { setTab(t); setSearch(''); };
 
   const now = Date.now();
@@ -786,5 +1020,5 @@ export default function Admin() {
       </main>
     );
   }
-  return <Dashboard onSignOut={out} />;
+  return <UiProvider><Dashboard onSignOut={out} /></UiProvider>;
 }

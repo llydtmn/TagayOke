@@ -11,3 +11,6 @@
 - Session history: every hosted session with its access code, real length, songs played, phones joined and how it ended.
 - Songs: pages of 50, "No video" and "Reported" filters, duplicate finder, CSV import (with preview) and export.
 - Broken videos are reported automatically from the TV when YouTube refuses a video, and phones get a "Video not working? Report it" link.
+
+
+

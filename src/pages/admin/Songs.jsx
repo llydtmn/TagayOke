@@ -270,7 +270,7 @@ export default function Songs({ setErr, q }) {
                       <td className="ad-actions">
                         {rep && <button className="ad-btn ghost small" onClick={() => run(() => admin.resolveSongReport(s.id))}>Mark fixed</button>}
                         <button className="ad-btn ghost small" onClick={() => edit(s)}>Edit</button>
-                        <button className="ad-btn danger small" onClick={() => window.confirm(`Delete #${s.code} ${s.title}?`) && run(() => admin.deleteSong(s.id))}>Delete</button>
+                        <button className="ad-btn danger small" onClick={() => window.confirm(`Delete #${s.code} ${s.title}?`) && run(() => admin.deleteSong(s.id, `#${s.code} ${s.title}`))}>Delete</button>
                       </td>
                     </tr>
                   );

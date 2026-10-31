@@ -73,8 +73,10 @@ export async function renameRoom(code, name) {
   check(await supabase.from('rooms').update({ name: name || null }).eq('code', code));
 }
 export async function deleteRoom(code) {
-  if (DEMO) { const db = loadRooms(); delete db[code]; saveRooms(db); savePeople(loadPeople().filter((p) => p.room_code !== code)); return; }
-  check(await supabase.from('rooms').delete().eq('code', code)); // queue and users go with it (ON DELETE CASCADE)
+  const info = await roomInfo(code); // read before it is gone, for the activity log
+  if (DEMO) { const db = loadRooms(); delete db[code]; saveRooms(db); savePeople(loadPeople().filter((p) => p.room_code !== code)); }
+  else check(await supabase.from('rooms').delete().eq('code', code)); // queue and users go with it (ON DELETE CASCADE)
+  await logAction('end_host', code, info);
 }
 
 // Adds time to a host session (or sets a limit on one that had none). Negative minutes shorten it.
@@ -96,17 +98,21 @@ export async function createCode({ label, seconds, maxUses, redeemByHours }) {
     code: makeAccessCode(), label: label || null, duration_seconds: seconds || null, max_uses: maxUses || 1,
     redeem_by: redeemByHours ? new Date(Date.now() + redeemByHours * 3600000).toISOString() : null,
   };
-  if (DEMO) { saveCodes([...loadCodes(), { ...row, id: uid(), uses: 0, revoked: false, created_at: new Date().toISOString(), last_used_at: null }]); return row.code; }
+  const detail = `${row.label || 'no label'} · ${row.duration_seconds ? `${Math.round(row.duration_seconds / 60)} min` : 'unlimited'}`;
+  if (DEMO) { saveCodes([...loadCodes(), { ...row, id: uid(), uses: 0, revoked: false, created_at: new Date().toISOString(), last_used_at: null }]); await logAction('create_code', row.code, detail); return row.code; }
   check(await supabase.from('host_codes').insert(row));
+  await logAction('create_code', row.code, detail);
   return row.code;
 }
-export async function setCodeRevoked(id, revoked) {
-  if (DEMO) { saveCodes(loadCodes().map((c) => (c.id === id ? { ...c, revoked } : c))); return; }
-  check(await supabase.from('host_codes').update({ revoked }).eq('id', id));
+export async function setCodeRevoked(id, revoked, code = '') {
+  if (DEMO) saveCodes(loadCodes().map((c) => (c.id === id ? { ...c, revoked } : c)));
+  else check(await supabase.from('host_codes').update({ revoked }).eq('id', id));
+  await logAction(revoked ? 'revoke_code' : 'restore_code', code || id);
 }
-export async function deleteCode(id) {
-  if (DEMO) { saveCodes(loadCodes().filter((c) => c.id !== id)); return; }
-  check(await supabase.from('host_codes').delete().eq('id', id));
+export async function deleteCode(id, code = '') {
+  if (DEMO) saveCodes(loadCodes().filter((c) => c.id !== id));
+  else check(await supabase.from('host_codes').delete().eq('id', id));
+  await logAction('delete_code', code || id);
 }
 
 // ---- users (participants) ----
@@ -122,9 +128,10 @@ export async function renamePerson(id, name) {
   if (DEMO) { const all = loadPeople(); const p = all.find((x) => x.id === id); if (p) { p.name = name; savePeople(all); } return; }
   check(await supabase.from('participants').update({ name }).eq('id', id));
 }
-export async function deletePerson(id) {
-  if (DEMO) { savePeople(loadPeople().filter((p) => p.id !== id)); return; }
-  check(await supabase.from('participants').delete().eq('id', id));
+export async function deletePerson(id, label = '') {
+  if (DEMO) savePeople(loadPeople().filter((p) => p.id !== id));
+  else check(await supabase.from('participants').delete().eq('id', id));
+  await logAction('remove_user', label || id);
 }
 
 // ---- songs (live mode only) ----
@@ -141,10 +148,11 @@ export async function saveSong({ id, title, artist, youtube_id, language }) {
     if (row.youtube_id) await resolveSongReport(id).catch(() => {}); // a new video link counts as a fix
   } else check(await supabase.from('songs').insert({ ...row, source: 'admin' }));
 }
-export async function deleteSong(id) {
+export async function deleteSong(id, label = '') {
   const { error } = await supabase.from('songs').delete().eq('id', id);
   if (error?.code === '23503') throw new Error('That song is in a queue right now. Try again after it has played.');
   if (error) throw error;
+  await logAction('delete_catalog_song', label || id);
 }
 
 // ---- reports & analytics ----
@@ -191,6 +199,15 @@ export async function listSessions(days = 30) {
   const { data, error } = await q;
   if (error) { if (needsSql(error)) return { rows: [], missing: true }; throw error; }
   return { rows: data, missing: false };
+}
+
+// Karaoke insights (needs supabase/session-insights.sql). One RPC call returns counts, never raw rows.
+export async function loadInsights(days = 30) {
+  if (DEMO) return { missing: false, demo: true };
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const { data, error } = await supabase.rpc('admin_insights', { p_days: days, p_tz: tz });
+  if (error) { if (error.code === 'PGRST202' || needsSql(error)) return { missing: true }; throw error; }
+  return data;
 }
 
 // ---- song catalog health (live mode only) ----
@@ -245,6 +262,7 @@ export async function deleteSongsSafe(ids) {
     else if (error.code === '23503') blocked += 1;
     else throw error;
   }
+  if (deleted) await logAction('delete_catalog_song', `${deleted} song${deleted === 1 ? '' : 's'}`, blocked ? `${blocked} skipped (in a queue)` : '');
   return { deleted, blocked };
 }
 
@@ -295,22 +313,28 @@ export async function loadRoomQueue(code) {
 }
 
 // Ends the song that is playing and starts the next one.
-export async function skipSong(code) {
-  if (DEMO) return api.advance(code);
-  const q = check(await supabase.from('queue_items').select('id, status').eq('room_code', code).neq('status', 'done').order('created_at'));
-  const playing = q.find((i) => i.status === 'playing');
-  const next = q.find((i) => i.status === 'queued');
-  if (playing) {
-    const done = check(await supabase.from('queue_items').update({ status: 'done' }).eq('id', playing.id).select('id'));
-    if (!done.length) throw new Error(NO_RIGHTS);
+export async function skipSong(code, label = '') {
+  if (DEMO) await api.advance(code);
+  else {
+    const q = check(await supabase.from('queue_items').select('id, status').eq('room_code', code).neq('status', 'done').order('created_at'));
+    const playing = q.find((i) => i.status === 'playing');
+    const next = q.find((i) => i.status === 'queued');
+    if (playing) {
+      const done = check(await supabase.from('queue_items').update({ status: 'done' }).eq('id', playing.id).select('id'));
+      if (!done.length) throw new Error(NO_RIGHTS);
+    }
+    if (next) check(await supabase.from('queue_items').update({ status: 'playing' }).eq('id', next.id).select('id'));
   }
-  if (next) check(await supabase.from('queue_items').update({ status: 'playing' }).eq('id', next.id).select('id'));
+  await logAction('skip_song', code, label);
 }
 
-export async function removeQueueItem(code, id) {
-  if (DEMO) return api.removeItem(code, id);
-  const gone = check(await supabase.from('queue_items').delete().eq('id', id).select('id'));
-  if (!gone.length) throw new Error(NO_RIGHTS);
+export async function removeQueueItem(code, id, label = '') {
+  if (DEMO) await api.removeItem(code, id);
+  else {
+    const gone = check(await supabase.from('queue_items').delete().eq('id', id).select('id'));
+    if (!gone.length) throw new Error(NO_RIGHTS);
+  }
+  await logAction('remove_song', code, label);
 }
 
 // Shows a short message on the host's TV for `seconds`. Empty text clears it.
@@ -326,9 +350,88 @@ export async function sendTvMessage(code, text, seconds = 20) {
       db[code].tv_message_at = new Date().toISOString();
     }
     saveRooms(db);
+    await logTv(code, t);
     return;
   }
   const { error } = await supabase.rpc('send_tv_message', { p_room: code, p_text: t, p_seconds: seconds });
   if (error) throw new Error(isMissingFn(error) ? NO_RIGHTS : error.message);
+  await logTv(code, t);
 }
+const logTv = (code, t) => (t ? logAction('tv_message', code, t) : logAction('tv_clear', code));
 export const clearTvMessage = (code) => sendTvMessage(code, '');
+
+// ---- admin activity log ----
+// Best effort on purpose: if the table is missing or the write fails, the admin action itself still goes through.
+const LOG_KEY = 'tagayoke:admin-log';
+const logMissing = (e) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /admin_log/i.test(e.message || ''));
+export async function logAction(action, target = '', detail = '') {
+  try {
+    if (DEMO) {
+      const all = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+      all.unshift({ id: uid(), at: new Date().toISOString(), admin_email: 'demo', action, target, detail });
+      localStorage.setItem(LOG_KEY, JSON.stringify(all.slice(0, 200)));
+      return;
+    }
+    const { data } = await supabase.auth.getSession();
+    await supabase.from('admin_log').insert({ admin_email: data.session?.user?.email || null, action, target: target || null, detail: detail || null });
+  } catch { /* never block the action */ }
+}
+export async function listLog(limit = 50) {
+  if (DEMO) return { rows: JSON.parse(localStorage.getItem(LOG_KEY) || '[]').slice(0, limit), missing: false };
+  const { data, error } = await supabase.from('admin_log').select('*').order('at', { ascending: false }).limit(limit);
+  if (error) { if (logMissing(error)) return { rows: [], missing: true }; throw error; }
+  return { rows: data, missing: false };
+}
+
+// A short description of a host, read just before it is ended.
+async function roomInfo(code) {
+  try {
+    if (DEMO) {
+      const r = loadRooms()[code];
+      return `${r?.name || 'Unnamed'} · ${loadPeople().filter((p) => p.room_code === code).length} users · ${(r?.queue || []).length} songs queued`;
+    }
+    const [r, u, q] = await Promise.all([
+      supabase.from('rooms').select('name').eq('code', code).maybeSingle(),
+      supabase.from('participants').select('id', { count: 'exact', head: true }).eq('room_code', code),
+      supabase.from('queue_items').select('id', { count: 'exact', head: true }).eq('room_code', code).neq('status', 'done'),
+    ]);
+    return `${r.data?.name || 'Unnamed'} · ${u.count ?? 0} users · ${q.count ?? 0} songs queued`;
+  } catch { return ''; }
+}
+
+// ---- undo support: copy a row before removing it, put the same row back if the admin taps Undo ----
+export async function snapshotPerson(id) {
+  if (DEMO) return loadPeople().find((p) => p.id === id) || null;
+  return check(await supabase.from('participants').select('*').eq('id', id).maybeSingle());
+}
+export async function restorePerson(row, label = '') {
+  if (!row) throw new Error('Nothing to restore.');
+  if (DEMO) { const all = loadPeople(); if (!all.some((p) => p.id === row.id)) savePeople([...all, row]); }
+  else {
+    const { error } = await supabase.from('participants').insert(row);
+    if (error) throw new Error(error.code === '23503' ? 'That room has already closed.' : error.message);
+  }
+  await logAction('restore_user', label || row.name);
+}
+export async function snapshotQueueItem(code, id) {
+  if (DEMO) {
+    const q = loadRooms()[code]?.queue || [];
+    const index = q.findIndex((i) => i.id === id);
+    return index < 0 ? null : { item: q[index], index };
+  }
+  return check(await supabase.from('queue_items').select('*').eq('id', id).maybeSingle());
+}
+export async function restoreQueueItem(code, snap, label = '') {
+  if (!snap) throw new Error('Nothing to restore.');
+  if (DEMO) {
+    const db = loadRooms();
+    if (!db[code]) throw new Error('That room has already closed.');
+    if (!db[code].queue) db[code].queue = [];
+    db[code].queue.splice(Math.min(snap.index, db[code].queue.length), 0, snap.item);
+    saveRooms(db);
+  } else {
+    const { error } = await supabase.from('queue_items').insert(snap);
+    if (error) throw new Error(error.code === '23503' ? 'That room has already closed.' : error.message);
+  }
+  await logAction('restore_song', code, label);
+}
