@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as admin from '../services/admin';
 import { getAnnouncement, saveAnnouncement } from '../services/settings';
 import { AnnouncementView } from '../components/Announcement';
+import { RichTextarea } from '../components/RichText';
 import Songs from './admin/Songs';
 import History from './admin/History';
 import { formatDuration, formatLeft } from '../utils/hostCode';
@@ -802,8 +803,8 @@ function Settings({ setErr }) {
             <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} placeholder="Announcement!" />
           </label>
           <label>Message
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={5} placeholder="e.g. We are closed on Dec 25. Happy holidays!" />
-            <small className="ad-dim ad-count">{message.length}/500</small>
+            <RichTextarea value={message} onChange={setMessage} maxLength={800} rows={5} placeholder="e.g. We are closed on Dec 25. Happy holidays! Details: https://example.com" />
+            <small className="ad-dim ad-count">{message.length}/800</small>
           </label>
           <div className="ad-row">
             <button className="ad-btn" disabled={busy || !dirty || !message.trim()}>Save message</button>

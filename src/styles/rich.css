@@ -1,0 +1,9 @@
+/* Announcement formatting: clickable links + bold, and the admin editor toolbar */
+.announce-body a { color: #ffd25e; text-decoration: underline; font-weight: 700; overflow-wrap: anywhere; }
+.vt .announce-body a { color: var(--v-coral); }
+.announce-body strong { font-weight: 800; }
+
+.rt-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.rt-btn { cursor: pointer; border: 1px solid rgba(128, 128, 160, .45); background: rgba(128, 128, 160, .15); color: inherit; border-radius: .5rem; padding: .3rem .7rem; font: inherit; font-size: .9rem; min-height: 0; }
+.rt-btn:hover { background: rgba(128, 128, 160, .3); }
+.rt-tip { font-size: .8rem; opacity: .7; }
