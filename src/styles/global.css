@@ -1104,3 +1104,30 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
   .timeup-text { font-size: 1.3rem; }
   .yt-paused p { font-size: 2.2rem; }
 }
+
+/* ---- restore boli-fam.jpg backgrounds ---- */
+.landing::before,
+.host::before {
+  content: "";
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #080e38;
+  background-image:
+    linear-gradient(rgba(6, 10, 40, 0.6), rgba(6, 10, 40, 0.84)),
+    url("/boli-fam.jpg");
+  background-position: center center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.tv-screen {
+  background-color: #0a1650;
+  background-image:
+    linear-gradient(rgba(10, 22, 80, 0.45), rgba(10, 22, 80, 0.45)),
+    url("/boli-fam.jpg");
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
