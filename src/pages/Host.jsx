@@ -9,7 +9,8 @@ import { joinUrl } from '../utils/roomCode';
 import { accessKey } from '../utils/hostCode';
 import Stage from '../components/Stage';
 import QueueList from '../components/QueueList';
-import { enterPageFullscreen, fsNow } from '../utils/fullscreen';
+import { fsNow } from '../utils/fullscreen';
+import Icon from '../components/Icon';
 
 // Keyed by room code, so continuing into a new room starts the screen fresh.
 export default function Host() {
@@ -20,7 +21,6 @@ export default function Host() {
 function HostRoom({ code }) {
   const nav = useNavigate();
   const [exists, setExists] = useState(null);
-  const [started, setStarted] = useState(false); // one tap satisfies browser autoplay rules
   const [timeUp, setTimeUp] = useState(null);   // { remaining } while we ask "continue?"
   const [busy, setBusy] = useState(false);
   const [timeErr, setTimeErr] = useState('');
@@ -91,8 +91,8 @@ function HostRoom({ code }) {
     nav('/', { replace: true });
   };
   useEffect(() => {
-    if (started && !nowPlaying && upNext.length) advance();
-  }, [started, nowPlaying, upNext.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!nowPlaying && upNext.length) advance();
+  }, [nowPlaying, upNext.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (exists === false) {
     return <main className="landing"><p className="error">Room {code} was not found.</p><Link to="/">Back to start</Link></main>;
@@ -103,19 +103,17 @@ function HostRoom({ code }) {
       <div className="host-main">
         <Stage item={nowPlaying} roomCode={code} onEnded={advance} upNext={upNext} left={left} startAt={startAt} onPosition={(t) => { pos.current = t; }}
           timeUp={timeUp && { remaining: timeUp.remaining, onContinue: continueSession, onEnd: finishExpired, busy, error: timeErr }} />
-        {!started && (
-          <div className="gate">
-            <button className="primary big" onClick={() => { enterPageFullscreen(); setStarted(true); }}>Start the session</button>
-            <p className="muted">One tap lets the browser play sound automatically.</p>
+        <div className="host-bar">
+          <SessionTimer left={left} />
+          <div className="host-bar-actions">
+            {nowPlaying && <button type="button" className="ghost" onClick={advance}><Icon name="skip" /> Skip this song</button>}
+            <button type="button" className="ghost danger" onClick={endSession}><Icon name="power" /> End session</button>
           </div>
-        )}
-        <SessionTimer left={left} />
-        {started && nowPlaying && <button className="ghost" onClick={advance}>Skip this song</button>}
-        <button className="ghost" onClick={endSession}>End session</button>
+        </div>
       </div>
-      <aside className="host-side">
+      <aside className="host-side" aria-label="Room code and queue">
         {/* While idle, the big QR lives on the TV screen. Show this card before the session starts and while a song plays. */}
-        {(nowPlaying || !started) && (
+        {nowPlaying && (
           <div className="join-card">
             <QRCodeSVG value={joinUrl(code)} size={132} bgColor="#fff6c2" fgColor="#0a1650" />
             <div>
@@ -124,7 +122,7 @@ function HostRoom({ code }) {
             </div>
           </div>
         )}
-        <h3>Up next{upNext.length ? ` (${upNext.length})` : ''}</h3>
+        <h3 className="side-title">Up next{upNext.length ? <span className="count">{upNext.length}</span> : null}</h3>
         <QueueList items={upNext} onRemove={remove} canRemoveAll empty="Queue is empty. Reserve a song from your phone." />
         {error && <p className="error">{error}</p>}
       </aside>

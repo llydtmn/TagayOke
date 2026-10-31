@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useMediaKeys } from '../hooks/useMediaKeys';
 
 // Stands in for the player when a song has no youtubeId (demo catalog).
 export default function DemoStage({ song, onEnded, onProgress, seconds = 15, startAt = 0 }) {
   const [t, setT] = useState(startAt || 0);
   const done = useRef(false);
+  useMediaKeys({ next: () => { if (!done.current) { done.current = true; onEnded(); } } }); // demo playback can only skip
   useEffect(() => {
     const id = setInterval(() => setT((x) => x + 0.25), 250);
     return () => clearInterval(id);

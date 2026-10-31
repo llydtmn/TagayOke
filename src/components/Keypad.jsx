@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services';
+import Icon from './Icon';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'DEL', '0', 'RES'];
 
@@ -34,16 +35,19 @@ export default function Keypad({ onReserve, onList }) {
     <section className="keypad">
       <div className="lcd">
         <p className="lcd-num" aria-live="polite">{digits.padEnd(5, '–')}</p>
-        <p className="lcd-song">{line}</p>
+        <p className="lcd-song" aria-live="polite">{line}</p>
       </div>
       <div className="keys">
         {KEYS.map((k) => (
-          <button key={k} className={`key ${k === 'RES' ? 'res' : ''} ${k === 'DEL' ? 'del' : ''}`} onClick={() => press(k)}>{k}</button>
+          <button key={k} className={`key ${k === 'RES' ? 'res' : ''} ${k === 'DEL' ? 'del' : ''}`} onClick={() => press(k)}
+            aria-label={k === 'DEL' ? 'Delete last digit' : k === 'RES' ? 'Reserve song' : undefined}>
+            {k === 'DEL' ? <Icon name="backspace" size={22} /> : k === 'RES' ? <><Icon name="check" size={20} />RES</> : k}
+          </button>
         ))}
       </div>
       <div className="keys-row">
-        <button className="key first" disabled={!song} onClick={() => reserve(true)}>FIRST</button>
-        <button className="key list" onClick={onList}>LIST</button>
+        <button className="key first" disabled={!song} onClick={() => reserve(true)} aria-label="Reserve as next song"><Icon name="skip" size={18} />FIRST</button>
+        <button className="key list" onClick={onList} aria-label="Open song list"><Icon name="list" size={18} />LIST</button>
       </div>
     </section>
   );

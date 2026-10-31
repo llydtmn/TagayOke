@@ -7,7 +7,10 @@ import SongBook from '../components/SongBook';
 import QueueList from '../components/QueueList';
 import Keypad from '../components/Keypad';
 import AddSongForm from '../components/AddSongForm';
+import Icon from '../components/Icon';
 import { MAX_QUEUE } from '../config/env';
+
+const TABS = [['keypad', 'Keypad', 'keypad'], ['book', 'Song book', 'book'], ['add', 'Add link', 'link'], ['queue', 'Queue', 'queue']];
 
 export default function Remote() {
   const { code } = useParams();
@@ -67,6 +70,17 @@ export default function Remote() {
   const full = queue.length >= MAX_QUEUE;
   const flash = (msg, ms = 2500) => { setToast(msg); setTimeout(() => setToast(''), ms); };
 
+  // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+  const onTabKey = (e) => {
+    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const i = TABS.findIndex(([id]) => id === tab);
+    const next = TABS[(i + step + TABS.length) % TABS.length][0];
+    setTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  };
+
   const reserve = async (song, opts) => {
     if (queue.length >= MAX_QUEUE) {
       flash(`The queue is full (${MAX_QUEUE} songs max). Try again after a song finishes.`, 4000);
@@ -80,21 +94,24 @@ export default function Remote() {
   return (
     <main className="remote">
       <header className="remote-head">
-        <span className="logo small">{code}</span>
-        <p className="muted">{nowPlaying ? `Now: ${nowPlaying.song.title}` : 'Nothing playing yet'}</p>
+        <span className="logo small" aria-label={`Room ${code}`}>{code}</span>
+        <p className="muted" aria-live="polite">{nowPlaying ? `Now: ${nowPlaying.song.title}` : 'Nothing playing yet'}</p>
       </header>
-      <nav className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'keypad'} onClick={() => setTab('keypad')}>Keypad</button>
-        <button role="tab" aria-selected={tab === 'book'} onClick={() => setTab('book')}>Song book</button>
-        <button role="tab" aria-selected={tab === 'add'} onClick={() => setTab('add')}>Add link</button>
-        <button role="tab" aria-selected={tab === 'queue'} onClick={() => setTab('queue')}>Queue{queue.length ? ` (${queue.length})` : ''}</button>
+      <nav className="tabs" role="tablist" aria-label="Remote sections" onKeyDown={onTabKey}>
+        {TABS.map(([id, label, icon]) => (
+          <button key={id} id={`tab-${id}`} role="tab" aria-selected={tab === id} aria-controls="remote-panel" tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)}>
+            <Icon name={icon} size={20} />{id === 'queue' && queue.length ? `Queue (${queue.length})` : label}
+          </button>
+        ))}
       </nav>
       {full && <p className="muted" role="status">Queue is full ({queue.length}/{MAX_QUEUE}). You can reserve again once a song finishes.</p>}
-      {tab === 'keypad' && <Keypad onReserve={reserve} onList={() => setTab('book')} />}
-      {tab === 'book' && <SongBook onReserve={reserve} />}
-      {tab === 'add' && <AddSongForm onReserve={reserve} />}
-      {tab === 'queue' && <QueueList items={queue} empty="Nobody has reserved a song yet. Open the song book and go first." />}
-      {error && <p className="error">{error}</p>}
+      <div id="remote-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {tab === 'keypad' && <Keypad onReserve={reserve} onList={() => setTab('book')} />}
+        {tab === 'book' && <SongBook onReserve={reserve} />}
+        {tab === 'add' && <AddSongForm onReserve={reserve} />}
+        {tab === 'queue' && <QueueList items={queue} empty="Nobody has reserved a song yet. Open the song book and go first." />}
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
       {toast && <p className="toast" role="status">{toast}</p>}
     </main>
   );

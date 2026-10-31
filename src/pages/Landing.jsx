@@ -5,6 +5,7 @@ import { APP_NAME, TAGLINE, USE_MOCK } from '../config/env';
 import { normalizeAccessCode, accessKey } from '../utils/hostCode';
 import { enterPageFullscreen, exitPageFullscreen } from '../utils/fullscreen';
 import Announcement from '../components/Announcement';
+import Icon from '../components/Icon';
 
 export default function Landing() {
   const nav = useNavigate();
@@ -44,7 +45,7 @@ export default function Landing() {
       <p className="lede">Reserve songs from your phone while someone else is mid-chorus. Numbered songs, a song book and a queue, like the real machine.</p>
       <div className="actions">
         {!asking ? (
-          <button className="primary big" onClick={() => { setErr(''); setAsking(true); }}>Host on this screen</button>
+          <button className="primary big" onClick={() => { setErr(''); setAsking(true); }}><Icon name="tv" />Host on this screen</button>
         ) : (
           <form onSubmit={host} className="host-code">
             <label className="field"><span>Enter your host access code</span>
@@ -52,16 +53,16 @@ export default function Landing() {
                 placeholder="XXXX-XXXX" autoCapitalize="characters" autoComplete="off" spellCheck={false} autoFocus />
             </label>
             <div className="host-code-btns">
-              <button className="primary big" type="submit" disabled={busy || access.length < 9}>{busy ? 'Checking…' : 'Start hosting'}</button>
+              <button className="primary big" type="submit" disabled={busy || access.length < 9}>{busy ? 'Checking…' : <><Icon name="play" size={18} />Start hosting</>}</button>
               <button className="ghost" type="button" onClick={() => { setAsking(false); setAccess(''); setErr(''); }}>Cancel</button>
             </div>
           </form>
         )}
         <form onSubmit={join} className="join">
           <label className="field"><span>Have a room code?</span>
-            <input value={code} onChange={(e) => setCode(e.target.value)} maxLength={4} placeholder="ABCD" autoCapitalize="characters" />
+            <input value={code} onChange={(e) => setCode(e.target.value)} maxLength={4} placeholder="ABCD" autoCapitalize="characters" autoComplete="off" spellCheck={false} />
           </label>
-          <button className="ghost" type="submit">Join room</button>
+          <button className="ghost" type="submit"><Icon name="enter" size={18} />Join room</button>
         </form>
       </div>
       {err && <p className="error" role="alert">{err}</p>}

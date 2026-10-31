@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../services';
+import Icon from './Icon';
 
 const PAGE = 100; // songs loaded per batch, listed A to Z by title
 
@@ -44,21 +45,21 @@ export default function SongBook({ onReserve }) {
     <section>
       <label className="field">
         <span>Song number, title or artist</span>
-        <input inputMode="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a Song..." />
+        <input type="search" inputMode="search" enterKeyHint="search" autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a Song..." />
       </label>
-      {exact && <button className="primary wide" onClick={() => onReserve(exact)}>Reserve #{exact.code} {exact.title}</button>}
-      <ul className="songs">
+      {exact && <button className="primary wide" onClick={() => onReserve(exact)}><Icon name="plus" size={18} />Reserve #{exact.code} {exact.title}</button>}
+      <ul className="songs" aria-label="Songs">
         {songs.map((s) => (
           <li key={s.id}>
             <span className="chip small">#{s.code}</span>
             <div className="grow"><b>{s.title}</b><span className="muted">{s.artist}</span></div>
-            <button className="primary" onClick={() => onReserve(s)}>Reserve</button>
+            <button className="primary" onClick={() => onReserve(s)} aria-label={`Reserve ${s.title}`}><Icon name="plus" size={18} />Reserve</button>
           </li>
         ))}
       </ul>
       {more && <button className="ghost wide" onClick={loadMore} disabled={loading}>{loading ? 'Loading…' : 'Show more songs'}</button>}
       {q && !songs.length && <p className="empty">No match in the song book.</p>}
-      {q && <button className="ghost wide" onClick={searchOnline}>Not in the book? Search YouTube karaoke</button>}
+      {q && <button className="ghost wide" onClick={searchOnline}><Icon name="search" size={18} />Not in the book? Search YouTube karaoke</button>}
       {note && <p className="muted" role="status">{note}</p>}
     </section>
   );

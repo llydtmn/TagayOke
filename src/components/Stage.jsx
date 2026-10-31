@@ -3,6 +3,7 @@ import YouTubePlayer from './YouTubePlayer';
 import DemoStage from './DemoStage';
 import IdleTV from './IdleTV';
 import { formatLeft } from '../utils/hostCode';
+import Icon from './Icon';
 
 const MAX_SHOWN = 4; // how many reserved songs fit on the top bar before "+N more"
 
@@ -70,11 +71,11 @@ function TimeUpPanel({ timeUp }) {
           This access code can be used {remaining} more {remaining === 1 ? 'time' : 'times'}. Continue to keep going in this room with a fresh session.
         </p>
         <div className="timeup-btns">
-          <button className="primary big" onClick={onContinue} disabled={busy}>{busy ? 'Starting…' : 'Continue session'}</button>
+          <button className="primary big" autoFocus onClick={onContinue} disabled={busy}>{busy ? 'Starting…' : 'Continue session'}</button>
           <button className="ghost" onClick={onEnd} disabled={busy}>End session</button>
         </div>
         <p className="timeup-note">Your reserved songs stay, and the current song carries on where it stopped.</p>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
       </div>
     </div>
   );
@@ -199,7 +200,7 @@ export default function Stage({ item, roomCode, onEnded, upNext = [], left = nul
       <div className="now">
         <span className="chip">#{song.code}</span>
         <div className="grow"><h2>{song.title}</h2><p className="muted">{song.artist} · sung by {singer}</p></div>
-        <button className="ghost" onClick={toggleFullscreen}>Full screen</button>
+        <button className="ghost" onClick={toggleFullscreen}><Icon name="maximize" size={18} />Full screen</button>
       </div>
     </div>
   );
