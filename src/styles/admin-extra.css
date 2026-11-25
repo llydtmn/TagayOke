@@ -71,3 +71,7 @@
 
 .ad-insight-grid { margin: 1rem 0; }
 .ad-insight-grid .ad-rsub { margin-top: 0; }
+
+/* free host code card */
+.ad-form label.ad-check { display: flex; align-items: center; gap: .5rem; color: inherit; }
+.ad-form label.ad-check input { width: auto; margin: 0; }

@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { getPublicAnnouncement } from '../services/settings';
+import { getPublicAnnouncement, getFreeCode, fillFreeCode, FREE_TOKEN } from '../services/settings';
 import RichText from './RichText';
 
 const ago = (iso) => {
@@ -31,17 +31,32 @@ export function AnnouncementView({ title, message, updatedAt, defaultOpen = fals
 }
 
 // Landing page version: fetches the saved announcement and renders nothing while it is hidden.
+// {{FREE_CODE}} in the message becomes a real unused host code (a new one appears as soon as it is used).
 export default function Announcement() {
   const [a, setA] = useState(null);
+  const [free, setFree] = useState(null);
   useEffect(() => {
     let alive = true;
-    const load = () => getPublicAnnouncement().then((v) => alive && setA(v));
+    const load = async () => {
+      const v = await getPublicAnnouncement();
+      const code = v && v.message.includes(FREE_TOKEN) ? await getFreeCode() : null;
+      if (alive) { setA(v); setFree(code); }
+    };
     load();
-    const t = setInterval(load, 30000);            // pick up admin changes without a reload
+    const t = setInterval(load, 30000);            // pick up admin changes and fresh free codes without a reload
     const onStore = (e) => { if (e.key === 'tagayoke:settings') load(); }; // demo mode: other tab
+    const onShow = () => { if (document.visibilityState === 'visible') load(); };
     window.addEventListener('storage', onStore);
-    return () => { alive = false; clearInterval(t); window.removeEventListener('storage', onStore); };
+    window.addEventListener('tagayoke:announce-refresh', load); // fired when a host code was rejected (maybe someone just used the free one)
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      alive = false; clearInterval(t);
+      window.removeEventListener('storage', onStore);
+      window.removeEventListener('tagayoke:announce-refresh', load);
+      document.removeEventListener('visibilitychange', onShow);
+    };
   }, []);
-  if (!a) return null;
-  return <AnnouncementView title={a.title} message={a.message} updatedAt={a.updated_at} />;
+  const message = a ? fillFreeCode(a.message, free) : '';
+  if (!message.trim()) return null;
+  return <AnnouncementView title={a.title} message={message} updatedAt={a.updated_at} />;
 }

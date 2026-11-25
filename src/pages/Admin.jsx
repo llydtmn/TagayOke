@@ -1,7 +1,7 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as admin from '../services/admin';
-import { getAnnouncement, saveAnnouncement } from '../services/settings';
+import { getAnnouncement, saveAnnouncement, getFreeConfig, saveFreeConfig, FREE_TOKEN, FREE_LABEL } from '../services/settings';
 import { AnnouncementView } from '../components/Announcement';
 import { RichTextarea } from '../components/RichText';
 import Songs from './admin/Songs';
@@ -807,6 +807,10 @@ function Settings({ setErr }) {
             <small className="ad-dim ad-count">{message.length}/800</small>
           </label>
           <div className="ad-row">
+            <button type="button" className="ad-btn ghost small" onClick={() => setMessage((m) => { const n = `${m}${m && !/\s$/.test(m) ? ' ' : ''}**${FREE_TOKEN}**`; return n.length <= 800 ? n : m; })}>Insert free host code</button>
+            <span className="ad-dim">Adds <code>{FREE_TOKEN}</code>: guests see a fresh unused code there. Set it up below.</span>
+          </div>
+          <div className="ad-row">
             <button className="ad-btn" disabled={busy || !dirty || !message.trim()}>Save message</button>
             <button type="button" className={`ad-btn ${visible ? 'danger' : 'dark'}`} onClick={toggle} disabled={busy} aria-pressed={visible}>
               {visible ? 'Hide announcement' : 'Make visible'}
@@ -819,13 +823,60 @@ function Settings({ setErr }) {
         <h4 className="ad-rsub">Preview</h4>
         <div className={`ad-preview ${visible ? '' : 'off'}`}>
           {message.trim()
-            ? <AnnouncementView key={`${title}|${message}`} title={title.trim() || 'Announcement!'} message={message.trim()} defaultOpen />
+            ? <AnnouncementView key={`${title}|${message}`} title={title.trim() || 'Announcement!'} message={message.trim().split(FREE_TOKEN).join('ABCD-1234')} defaultOpen />
             : <p className="ad-dim">Nothing to preview yet.</p>}
           {!visible && message.trim() && <p className="ad-dim ad-prev-note">Hidden: guests do not see this yet.</p>}
+          {message.includes(FREE_TOKEN) && <p className="ad-dim ad-prev-note">ABCD-1234 is a sample. Guests get a real code.</p>}
         </div>
       </section>
+      <FreeCodeCard setErr={setErr} />
       <ActivityLog setErr={setErr} />
     </div>
+  );
+}
+
+
+// ---------- free host code for new users ----------
+const FREE_LENGTHS = [[30, '30 minutes'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours'], [0, 'Unlimited']];
+
+function FreeCodeCard({ setErr }) {
+  const [cfg, setCfg] = useState(null);
+  const [codes, setCodes] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const refresh = useCallback(() => admin.listCodes().then((l) => setCodes(l.filter((c) => c.label === FREE_LABEL))).catch(() => {}), []);
+  useEffect(() => { getFreeConfig().then(setCfg).catch((e) => setErr(e.message || String(e))); refresh(); }, [setErr, refresh]);
+  if (!cfg) return null;
+  const save = async () => {
+    setErr(''); setBusy(true);
+    try { setCfg(await saveFreeConfig(cfg)); setNote('Saved.'); setTimeout(() => setNote(''), 2500); } catch (e) { setErr(e.message || String(e)); } finally { setBusy(false); }
+  };
+  const given = codes.length;
+  const used = codes.filter((c) => c.uses > 0).length;
+  const waiting = codes.find((c) => !c.revoked && c.uses < c.max_uses);
+  return (
+    <section className="ad-rcard">
+      <div className="ad-rhead">
+        <h3><Icon name="key" size={18} /> Free host code</h3>
+        <span className={`ad-status ${cfg.enabled ? 'ok' : 'dim'}`}>{cfg.enabled ? 'On' : 'Off'}</span>
+      </div>
+      <p className="ad-dim ad-lead">Put <code>{FREE_TOKEN}</code> in the announcement. It shows one unused host code. When someone uses it, a new code is made automatically, so the announcement never runs out.</p>
+      <div className="ad-form">
+        <label className="ad-check"><input type="checkbox" checked={cfg.enabled} onChange={(e) => setCfg({ ...cfg, enabled: e.target.checked })} /> Give out free host codes</label>
+        <label>Session length of each free code
+          <select value={cfg.minutes} onChange={(e) => setCfg({ ...cfg, minutes: Number(e.target.value) })}>
+            {FREE_LENGTHS.map(([m, t]) => <option key={m} value={m}>{t}</option>)}
+          </select>
+        </label>
+        <label className="ad-check"><input type="checkbox" checked={cfg.onePerDevice} onChange={(e) => setCfg({ ...cfg, onePerDevice: e.target.checked })} /> One free code per device (hides the code after this device used one)</label>
+        <div className="ad-row">
+          <button type="button" className="ad-btn" onClick={save} disabled={busy}>Save free code settings</button>
+          {note && <span className="ad-dim" role="status">{note}</span>}
+        </div>
+      </div>
+      <p className="ad-dim">Given out: {given} · Used: {used}{waiting ? <> · Waiting now: <b>{waiting.code}</b></> : ' · Waiting now: none yet (made when a guest opens the page)'} <button type="button" className="ad-link" onClick={refresh}>Refresh</button></p>
+      <p className="ad-dim">Turning this off stops new codes. A code already shown still works until it is used. Revoke it under Codes to stop it. Auto codes are labelled “{FREE_LABEL}”.</p>
+    </section>
   );
 }
 

@@ -5,6 +5,7 @@ import { APP_NAME, TAGLINE, USE_MOCK } from '../config/env';
 import { normalizeAccessCode, accessKey } from '../utils/hostCode';
 import { enterPageFullscreen, exitPageFullscreen } from '../utils/fullscreen';
 import Announcement from '../components/Announcement';
+import { noteFreeCodeUsed } from '../services/settings';
 import Icon from '../components/Icon';
 import { HatchDefs, Mic, Notes, Waves, Burst } from '../components/VintageArt';
 
@@ -28,8 +29,12 @@ export default function Landing() {
     try {
       const { code: room } = await api.redeemHostCode(access);
       try { sessionStorage.setItem(accessKey(room), normalizeAccessCode(access)); } catch { /* private mode: no "continue" offer */ }
+      noteFreeCodeUsed(normalizeAccessCode(access));
       nav(`/host/${room}`);
-    } catch (x) { exitPageFullscreen(); setErr(x.message || 'Could not start hosting.'); }
+    } catch (x) {
+      exitPageFullscreen(); setErr(x.message || 'Could not start hosting.');
+      window.dispatchEvent(new Event('tagayoke:announce-refresh')); // the free code may have just been taken: show the next one
+    }
     finally { setBusy(false); }
   };
   const join = async (e) => {
